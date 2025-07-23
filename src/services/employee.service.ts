@@ -26,7 +26,8 @@ export const employeeService = {
     return newEmployee;
   },
   updateEmployee: async (id: number, data: Partial<Employee>) => {
-    const employee = await employeeRepository.update(id, data);
+    await employeeRepository.update(id, data);
+    const employee = await employeeRepository.findOneBy({ id });
     return employee;
   },
   deleteEmployee: async (id: number) => {
