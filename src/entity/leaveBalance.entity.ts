@@ -31,7 +31,9 @@ export class LeaveBalance {
   @ManyToOne(() => Employee, (employee) => employee.leaveBalances)
   employee: Employee;
 
-  @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.leaveType)
+  @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.leaveType, {
+    nullable: true,
+  })
   leaveRequests: LeaveRequest[];
 
   @CreateDateColumn()

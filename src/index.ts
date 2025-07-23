@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { db } from "./config/db";
 import employeeRouters from "./routes/employee.routes";
+import { errorMiddleware } from "./middlewares/errorMiddleware";
 
 const PORT = process.env.PORT;
 
@@ -23,9 +24,12 @@ app.use(express.json());
 
 // Routing
 app.get("/", (req, res) => {
-  res.send("Welcome to hrm API")
-})
+  res.send("Welcome to hrm API");
+});
 app.use("/api/v1/", employeeRouters);
+
+//Error middleware
+app.use(errorMiddleware);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

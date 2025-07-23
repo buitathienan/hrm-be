@@ -41,7 +41,7 @@ export class EmployeePayroll {
   @Column()
   bankName: string;
 
-  @Column()
+  @Column({ type: "date" })
   effectiveDate: Date;
 
   @CreateDateColumn()

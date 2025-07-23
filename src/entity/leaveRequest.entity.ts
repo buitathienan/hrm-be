@@ -22,10 +22,10 @@ export class LeaveRequest {
   @ManyToOne(() => LeaveBalance, (leaveBalance) => leaveBalance.leaveRequests)
   leaveType: LeaveBalance;
 
-  @Column()
+  @Column({ type: "date" })
   fromDate: Date;
 
-  @Column()
+  @Column({ type: "date" })
   toDate: Date;
 
   @Column("decimal", { precision: 5, scale: 2 })

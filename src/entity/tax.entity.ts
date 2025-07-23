@@ -1,29 +1,33 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from "typeorm";
-
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 
 @Entity()
 export class Tax {
-    @PrimaryGeneratedColumn()
-    id: number
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column()
-    type: string
+  @Column()
+  type: string;
 
-    @Column()
-    year: number
+  @Column()
+  year: number;
 
-    @Column({type: "decimal", precision: 5, scale: 4})
-    rate: number
+  @Column({ type: "decimal", precision: 5, scale: 4 })
+  rate: number;
 
-    @Column({type: "decimal", precision: 12, scale: 2})
-    minIncome: number
+  @Column({ type: "decimal", precision: 12, scale: 2 })
+  minIncome: number;
 
-    @Column({type: "decimal", precision: 12, scale: 2})
-    maxIncome: number
+  @Column({ type: "decimal", precision: 12, scale: 2 })
+  maxIncome: number;
 
-    @Column()
-    effectiveDate: Date
+  @Column({ type: "date" })
+  effectiveDate: Date;
 
-    @CreateDateColumn()
-    createdDate: Date
+  @CreateDateColumn()
+  createdDate: Date;
 }

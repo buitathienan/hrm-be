@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   OneToOne,
@@ -14,11 +15,18 @@ import { PayrollRecord } from "./payrollRecord.entity";
 import { Attendance } from "./attendance.entity";
 import { LeaveBalance } from "./leaveBalance.entity";
 import { LeaveRequest } from "./leaveRequest.entity";
+import { EmploymentType } from "./employementType.entity";
+import { Designation } from "./designation.entity";
 
 export enum gender {
   MALE = "Male",
   FEMALE = "Female",
   OTHER = "Other",
+}
+
+export enum EmployeeStatus {
+  ACTIVE = "Active",
+  INACTIVE = "Inactive",
 }
 
 @Entity()
@@ -29,29 +37,32 @@ export class Employee {
   @Column({ length: 255 })
   name: string;
 
-  @Column({type: "enum", enum: gender})
+  @Column({ type: "enum", enum: gender })
   gender: gender;
 
-  @Column()
+  @Column({ type: "date" })
   dob: Date;
 
   @Column({
     unique: true,
     length: 100,
+    nullable: true,
   })
   email: string;
 
   @Column({
     unique: true,
     length: 15,
+    nullable: true,
   })
   phone: string;
 
-  @Column()
+  @Column({ type: "date" })
   hireDate: Date;
 
   @Column({
     unique: true,
+    nullable: true,
   })
   passport: string;
 
@@ -66,10 +77,7 @@ export class Employee {
   })
   avatar: string;
 
-  @Column()
-  jobTitle: string;
-
-  @OneToOne(() => User, (user) => user.employee, { onDelete: "CASCADE" })
+  @OneToOne(() => User, (user) => user.employee, { nullable: true })
   user: User;
 
   @ManyToOne(() => Employee, (employee) => employee.subordinates, {
@@ -78,7 +86,7 @@ export class Employee {
   })
   manager: Employee;
 
-  @OneToMany(() => Employee, (employee) => employee.manager)
+  @OneToMany(() => Employee, (employee) => employee.manager, { nullable: true })
   subordinates: Employee[];
 
   @ManyToOne(() => Department, (department) => department.employees, {
@@ -89,21 +97,45 @@ export class Employee {
 
   @OneToOne(
     () => EmployeePayroll,
-    (employeePayRoll) => employeePayRoll.employee
+    (employeePayRoll) => employeePayRoll.employee,
+    { nullable: true }
   )
   payroll: EmployeePayroll;
 
-  @OneToMany(() => PayrollRecord, (payrollRecord) => payrollRecord.employee)
-  payrollRecord: PayrollRecord[]
-  
-  @OneToMany(() => Attendance, (attendance) => attendance.employee)
-  attendances: Attendance[]
+  @OneToMany(() => PayrollRecord, (payrollRecord) => payrollRecord.employee, {
+    nullable: true,
+  })
+  payrollRecord: PayrollRecord[];
 
-  @OneToMany(() => LeaveBalance, (leaveBalance) => leaveBalance.employee)
-  leaveBalances: LeaveBalance[]
+  @OneToMany(() => Attendance, (attendance) => attendance.employee, {
+    nullable: true,
+  })
+  attendances: Attendance[];
 
-  @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.employee)
-  leaveRequests: LeaveRequest[]  
+  @OneToMany(() => LeaveBalance, (leaveBalance) => leaveBalance.employee, {
+    nullable: true,
+  })
+  leaveBalances: LeaveBalance[];
+
+  @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.employee, {
+    nullable: true,
+  })
+  leaveRequests: LeaveRequest[];
+
+  @OneToOne(() => EmploymentType, { eager: true, nullable: true })
+  @JoinColumn()
+  employmentType: EmploymentType;
+
+  @OneToOne(() => Designation, { eager: true, nullable: true })
+  @JoinColumn()
+  designation: Designation;
+
+  @Column({
+    type: "enum",
+    enum: EmployeeStatus,
+    default: EmployeeStatus.ACTIVE,
+  })
+  status: EmployeeStatus;
 
   @CreateDateColumn()
   createdDate: Date;

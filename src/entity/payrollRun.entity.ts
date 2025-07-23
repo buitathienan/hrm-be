@@ -19,13 +19,13 @@ export class PayrollRun {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: "date" })
   payPeriodStart: Date;
 
-  @Column()
+  @Column({ type: "date" })
   payPeriodEnd: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: "date" })
   payDate: Date;
 
   @Column({ nullable: true, type: "decimal" })
