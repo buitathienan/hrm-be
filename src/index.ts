@@ -3,6 +3,7 @@ import cors from "cors";
 import { db } from "./config/db";
 import employeeRouters from "./routes/employee.routes";
 import { errorMiddleware } from "./middlewares/errorMiddleware";
+import userRouter from "./routes/user.routes";
 
 const PORT = process.env.PORT;
 
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
   res.send("Welcome to hrm API");
 });
 app.use("/api/v1/", employeeRouters);
+app.use("/api/v1/", userRouter);
 
 //Error middleware
 app.use(errorMiddleware);

@@ -14,13 +14,27 @@ export enum Role {
   EMPLOYEE = "employee",
 }
 
+export enum UserGender {
+  MALE = "Male",
+  FEMALE = "Female",
+  NOTCHOOSE = "Not chosen",
+}
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({
+    unique: true
+  })
+  email: string;
+
   @Column()
-  username: string;
+  name: string;
+
+  @Column({ type: "enum",enum: UserGender ,default: UserGender.NOTCHOOSE })
+  gender: UserGender;
 
   @Column()
   password: string;
@@ -28,12 +42,8 @@ export class User {
   @Column({ nullable: true })
   avatar: string;
 
-  @Column({type: "enum", enum: Role})
+  @Column({ type: "enum", enum: Role })
   role: Role;
-
-  @OneToOne(() => Employee, (employee) => employee.user)
-  @JoinColumn()
-  employee: Employee;
 
   @Column({ default: true })
   isActive: boolean;

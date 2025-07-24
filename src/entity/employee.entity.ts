@@ -77,9 +77,6 @@ export class Employee {
   })
   avatar: string;
 
-  @OneToOne(() => User, (user) => user.employee, { nullable: true })
-  user: User;
-
   @ManyToOne(() => Employee, (employee) => employee.subordinates, {
     nullable: true,
     onDelete: "SET NULL",
