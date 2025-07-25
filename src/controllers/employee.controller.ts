@@ -12,7 +12,7 @@ export const employeeController = {
 
   addEmployee: async (req: Request, res: Response) => {
     const newEmployee = await employeeService.addEmployee(req.body);
-    res.status(200).json({ status: "success", data: newEmployee });
+    res.status(201).json({ status: "success", data: newEmployee });
   },
 
   updateEmployee: async (req: Request, res: Response) => {

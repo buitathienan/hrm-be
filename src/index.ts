@@ -27,8 +27,8 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.send("Welcome to hrm API");
 });
-app.use("/api/v1/", employeeRouters);
-app.use("/api/v1/", userRouter);
+app.use("/api/", employeeRouters);
+app.use("/api/", userRouter);
 
 //Error middleware
 app.use(errorMiddleware);
