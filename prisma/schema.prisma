@@ -1,0 +1,461 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+  TEMPORARY
+  FREELANCE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+  RESIGNED
+  RETIRED
+  SUSPENDED
+}
+
+enum LeaveCategory {
+  ANNUAL
+  SICK
+  UNPAID
+  PUBLIC_HOLIDAY
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  IN_REPAIR
+  RETIRED
+  LOST
+}
+
+enum PayType {
+  SALARY
+  HOURLY
+  COMMISSION
+  MIXED
+}
+
+enum PayFrequency {
+  WEEKLY
+  BI_WEEKLY
+  SEMI_MONTHLY
+  MONTHLY
+  ANNUALLY
+}
+
+model Department {
+  id String @id @default(uuid(7))
+  name String
+  code String? @unique
+  description String?
+  parentId String?
+  headId String? @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children Department[] @relation("DepartmentHierarchy")
+  head Employee? @relation("DepartmentHead", fields: [headId], references: [id])
+  positions Position[]
+  employees Employee[]
+}
+
+model Position {
+  id String @id @default(uuid(7))
+  title String
+  code         String?
+  departmentId String?
+  department Department? @relation(fields: [departmentId], references: [id])
+  minSalary Decimal? @db.Decimal(15, 2)
+  maxSalary Decimal? @db.Decimal(15, 2)
+  isActive Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employees Employee[]
+
+}
+
+model Employee {
+  id String @id @default(uuid(7))
+  employeeNumber String @unique
+  firstName String
+  lastName String
+  email String @unique
+  workEmail String? @unique
+  phone String?
+  dateOfBirth DateTime?
+  gender Gender?
+  profilePhotoUrl String?
+  hireDate         DateTime
+  probationEnd     DateTime?
+  confirmationDate DateTime?
+  terminationDate  DateTime?
+  employmentType EmploymentType @default(FULL_TIME)
+  employmentStatus EmploymentStatus @default(ACTIVE)
+  positionId String?
+  position Position? @relation(fields: [positionId], references: [id])
+  departmentId String?
+  department Department? @relation(fields: [departmentId], references: [id])
+  managerId String?
+  manager Employee? @relation("ManagerSubordinates",fields: [managerId], references: [id])
+  subordinates Employee[] @relation("ManagerSubordinates")
+  headOfDepartment Department? @relation("DepartmentHead")
+  address String?
+  bankAccounts BankAccount[]
+  userId String? @unique
+  user User? @relation(fields: [userId], references: [id])
+  leaveBalances LeaveBalance[]
+  leaveRequests LeaveRequest[] @relation("EmployeeLeaveRequests")
+  leaveApprovals LeaveRequest[] @relation("LeaveApprover")
+    attendance       Attendance[]
+    scheduleId String?
+  schedule ShiftSchedule? @relation(fields: [scheduleId], references: [id])
+  assets           AssetAssignment[]
+  salaryHistory SalaryHistory[]
+  payrollInfo PayrollInfo?
+  payslips Payslip[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model BankAccount {
+  id String @id @default(uuid(7))
+  employeeId String
+  employee Employee @relation(fields: [employeeId], references: [id])
+  accountName String
+  accountNumber String
+  currency String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  refreshToken String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee     Employee?
+  roleId String
+  role Role @relation(fields: [roleId], references: [id])
+
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  resource    String
+  action      String
+  description String?
+
+  roles       RolePermission[]
+
+  @@unique([resource, action])
+}
+
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+ 
+}
+
+model LeaveType {
+  id String @id @default(uuid(7))
+  name String
+  category LeaveCategory
+  isPaid Boolean @default(true)
+  isActive Boolean @default(true)
+  requiresApproval      Boolean       @default(true)
+  leaveBalance LeaveBalance[]
+  leaveRequests LeaveRequest[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model LeaveBalance {
+  id String @id @default(uuid(7))
+  employeeId String
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveTypeId String
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+  year Int
+  entitled    Decimal   @db.Decimal(5, 2)
+  used Decimal @default(0) @db.Decimal(5, 2)
+  pending Decimal @default(0) @db.Decimal(5, 2)
+  carriedOver Decimal @default(0) @db.Decimal(5, 2)
+    createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([employeeId, leaveTypeId, year])
+}
+
+model LeaveRequest {
+  id String @id @default(uuid(7))
+  employeeId String
+  leaveTypeId String
+  startDate DateTime
+  endDate DateTime
+  totalDays Decimal @db.Decimal(5, 2)
+  reason String?
+  status LeaveStatus @default(PENDING)
+  approverId String?
+  approvedAt DateTime?
+  rejectedAt DateTime?
+  rejectionReason String?
+  attachmentUrl String?
+   createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  employee Employee @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+  approver Employee? @relation("LeaveApprover", fields:[approverId], references: [id])
+}
+
+model PublicHoliday {
+  id String @id @default(uuid(7))
+  name String
+  date DateTime
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attendance {
+  id             String    @id @default(cuid())
+  employeeId     String
+  date           DateTime  @db.Date
+  checkIn        DateTime?
+  checkOut       DateTime?
+  hoursWorked    Decimal?  @db.Decimal(5, 2)
+  overtimeHours  Decimal?  @db.Decimal(5, 2)
+  isLate         Boolean   @default(false)
+  isAbsent       Boolean   @default(false)
+  notes          String?
+  source         String?   // BIOMETRIC, MANUAL, MOBILE, WEB
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  employee       Employee  @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+}
+
+model Shift {
+  id         String   @id @default(cuid())
+  name       String
+  startTime  String   // HH:mm format
+  endTime    String
+  breakMins  Int      @default(60)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  schedules  ShiftSchedule[]
+
+}
+
+model ShiftSchedule {
+  id         String   @id @default(cuid())
+  shiftId    String
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime @default(now())
+
+  shift      Shift    @relation(fields: [shiftId], references: [id])
+  employee       Employee[] 
+}
+
+model Asset {
+  id           String           @id @default(cuid())
+  name         String
+  category     String
+  serialNumber String?          @unique
+  brand        String?
+  model        String?
+  purchaseDate DateTime?
+  purchaseCost Decimal?         @db.Decimal(15, 2)
+  status       AssetStatus      @default(AVAILABLE)
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  assignments  AssetAssignment[]
+
+}
+
+model AssetAssignment {
+  id           String    @id @default(cuid())
+  assetId      String
+  employeeId   String
+  assignedAt   DateTime  @default(now())
+  returnedAt   DateTime?
+  condition    String?
+  notes        String?
+
+  asset        Asset     @relation(fields: [assetId], references: [id])
+  employee     Employee  @relation(fields: [employeeId], references: [id])
+}
+
+model PayrollInfo {
+  id String @id @default(uuid(7))
+  employeeId String @unique
+  payType PayType @default(SALARY)
+  payFrequency PayFrequency @default(MONTHLY)
+  baseSalary Decimal @db.Decimal(15, 2)
+  currency String @default("VND")
+  taxId String?
+  taxCode String?
+  taxExemptions Int @default(0)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  deductions Deduction[]
+  allowances Allowance[]
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model SalaryHistory {
+  id String @id @default(uuid(7))
+  employeeId String
+  oldSalary Decimal @db.Decimal(15, 2)
+  newSalary Decimal @db.Decimal(15, 2)
+  currency String @default("VND")
+  effectiveAt DateTime
+  reason String?
+  approvedById String?
+  createdAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model Allowance {
+  id String @id @default(uuid(7))
+  payrollInfoId String
+  name String
+  amount Decimal @db.Decimal(15, 2)
+  isTaxable Boolean @default(true)
+  isRecurring Boolean @default(true)
+  payrollInfo   PayrollInfo @relation(fields: [payrollInfoId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Deduction {
+  id            String      @id @default(cuid())
+  payrollInfoId String
+  name          String
+  amount        Decimal?    @db.Decimal(15, 2)
+  percentage    Decimal?    @db.Decimal(5, 2)
+  isPreTax      Boolean     @default(false)
+  isRecurring   Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  payrollInfo   PayrollInfo @relation(fields: [payrollInfoId], references: [id], onDelete: Cascade)
+}
+
+model PayrollRun {
+  id          String    @id @default(cuid())
+  periodStart DateTime
+  periodEnd   DateTime
+  payDate     DateTime
+  status      String    @default("DRAFT") // DRAFT, PROCESSING, COMPLETED, CANCELLED
+  totalGross  Decimal   @db.Decimal(15, 2)
+  totalNet    Decimal   @db.Decimal(15, 2)
+  totalTax    Decimal   @db.Decimal(15, 2)
+  notes       String?
+  processedAt DateTime?
+  processedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  payslips    Payslip[]
+
+}
+
+model Payslip {
+  id             String     @id @default(cuid())
+  employeeId     String
+  payrollRunId   String
+  grossPay       Decimal    @db.Decimal(15, 2)
+  netPay         Decimal    @db.Decimal(15, 2)
+  totalAllowance Decimal    @db.Decimal(15, 2)
+  totalDeduction Decimal    @db.Decimal(15, 2)
+  totalTax       Decimal    @db.Decimal(15, 2)
+  currency       String     @default("VND")
+  paidAt         DateTime?
+  fileUrl        String?
+  createdAt      DateTime   @default(now())
+
+  employee       Employee   @relation(fields: [employeeId], references: [id])
+  payrollRun     PayrollRun @relation(fields: [payrollRunId], references: [id])
+  lineItems      PayslipLineItem[]
+
+  @@unique([employeeId, payrollRunId])
+}
+
+model PayslipLineItem {
+  id        String  @id @default(cuid())
+  payslipId String
+  name      String
+  type      String  // EARNING, DEDUCTION, TAX
+  amount    Decimal @db.Decimal(15, 2)
+
+  payslip   Payslip @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+}
