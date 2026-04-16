@@ -48,7 +48,7 @@ async function main() {
   // ---------------------------------------------------------------------------
   const user = await prisma.user.create({
     data: {
-      email: 'alice@company.com',
+      email: 'alice@hrm.com',
       passwordHash: await bcrypt.hash('123456aA', 10),
       isActive: true,
       roleId: role.id,
@@ -110,7 +110,7 @@ async function main() {
       firstName: 'Alice',
       lastName: 'Nguyễn',
       email: 'alice.nguyen@personal.com',
-      workEmail: 'alice@company.com',
+      workEmail: 'alice@hrm.com',
       phone: '+84901234567',
       dateOfBirth: new Date('1992-05-15'),
       gender: Gender.FEMALE,
@@ -329,7 +329,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Seed hoàn tất!');
+  console.log('✅ Seed hoàn tất! User: alice@hrm.com Pass:123456aA');
 }
 
 main()
