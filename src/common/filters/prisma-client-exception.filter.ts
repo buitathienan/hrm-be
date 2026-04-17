@@ -7,10 +7,16 @@ export class PrismaExceptionFilter implements ExceptionFilter {
   catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
     switch (exception.code) {
-      case 'P2002':
+      case 'P2002': // P2002: Data exists.
         response.status(409).json({
           statusCode: 409,
           message: 'A record with this unique data already exists.',
+        });
+        break;
+      case 'P2025': // P2025: Not Found
+        response.status(404).json({
+          statusCode: 404,
+          message: 'Not Found.',
         });
         break;
       default:
