@@ -22,6 +22,7 @@ export class DepartmentsService {
       where: { id },
     });
     if (!department) throw new NotFoundException();
+    return department;
   }
 
   async update(id: string, data: UpdateDepartmentDto) {
