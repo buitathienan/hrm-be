@@ -12,18 +12,21 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           statusCode: 409,
           message: 'A record with this unique data already exists',
         });
+        console.log(exception);
         break;
       case 'P2003': // P2003: Foreign Key Conflict
         response.status(409).json({
           statusCode: 400,
           message: 'Bad request',
         });
+        console.log(exception);
         break;
       case 'P2025': // P2025: Not Found
         response.status(404).json({
           statusCode: 404,
           message: 'Not Found',
         });
+        console.log(exception);
         break;
       default:
         console.error(exception);

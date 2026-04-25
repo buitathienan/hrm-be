@@ -11,11 +11,16 @@ import { EmployeesService } from './employees.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { CreateLeaveRequestDto } from 'src/leaves/dto/create-leave-request.dto';
+import { LeaveService } from 'src/leaves/leaves.service';
 
 @ApiTags('Employees')
 @Controller('employees')
 export class EmployeesController {
-  constructor(private employeeService: EmployeesService) {}
+  constructor(
+    private employeeService: EmployeesService,
+    private leaveService: LeaveService,
+  ) {}
 
   @Post()
   async createEmployee(@Body() createemployeeDto: CreateEmployeeDto) {
@@ -43,5 +48,12 @@ export class EmployeesController {
   @Delete(':id')
   async delete(@Param('id') id: string) {
     return this.employeeService.delete(id);
+  }
+
+  @Post('leaves')
+  async createLeaveRequest(
+    @Body() createLeaveRequestDto: CreateLeaveRequestDto,
+  ) {
+    return this.leaveService.createLeaveRequest(createLeaveRequestDto);
   }
 }
