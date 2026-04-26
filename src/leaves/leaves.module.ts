@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { LeaveService } from './leaves.service';
+import { LeavesService } from './leaves.service';
+import { LeavesController } from './leaves.controller';
 
 @Module({
-  providers: [LeaveService],
-  exports: [LeaveService],
+  providers: [LeavesService],
+  controllers: [LeavesController],
 })
 export class LeaveModule {}
