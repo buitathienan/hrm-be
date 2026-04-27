@@ -1,7 +1,12 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { compareAsc, differenceInDays } from 'date-fns';
+import { LeaveStatus } from 'src/generated/prisma/enums';
 
 @Injectable()
 export class LeavesService {
@@ -50,7 +55,7 @@ export class LeavesService {
       await tx.leaveBalance.update({
         where: { id: leaveBalance.id },
         data: {
-          pending: { increment: 1 },
+          pending: { increment: totalRequestDays },
           entitled: {
             decrement: totalRequestDays,
           },
@@ -68,6 +73,48 @@ export class LeavesService {
         },
       });
     });
+    return result;
+  }
+
+  async updateStatus(id: string, status: LeaveStatus) {
+    const leaveRequest = await this.prisma.leaveRequest.findUnique({
+      where: { id },
+    });
+    if (!leaveRequest) throw new NotFoundException('Leave request not found');
+    if (leaveRequest.status === 'REJECTED' && status === 'REJECTED')
+      throw new BadRequestException();
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const leaveBalance = await tx.leaveBalance.findFirst({
+        where: {
+          leaveTypeId: leaveRequest?.leaveTypeId,
+          employeeId: leaveRequest?.employeeId,
+          year: new Date().getFullYear(),
+        },
+      });
+
+      if (!leaveBalance) throw new NotFoundException('Leave balance not found');
+
+      if (status === 'REJECTED') {
+        await tx.leaveBalance.update({
+          where: { id: leaveBalance.id },
+          data: {
+            pending: { decrement: leaveRequest.totalDays },
+            entitled: { increment: leaveRequest.totalDays },
+          },
+        });
+      } else if (status === 'APPROVED') {
+        await tx.leaveBalance.update({
+          where: { id: leaveBalance.id },
+          data: {
+            pending: { decrement: leaveRequest.totalDays },
+          },
+        });
+      }
+
+      return tx.leaveRequest.update({ where: { id }, data: { status } });
+    });
+
     return result;
   }
 }
