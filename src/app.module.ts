@@ -5,6 +5,7 @@ import { envValidation } from './env.validation';
 import { DepartmentsModule } from './departments/departments.module';
 import { EmployeesModule } from './employees/employees.module';
 import { LeaveModule } from './leaves/leaves.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { LeaveModule } from './leaves/leaves.module';
     DepartmentsModule,
     EmployeesModule,
     LeaveModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],
