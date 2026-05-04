@@ -3,6 +3,7 @@ import { LoginDto } from './dto/login.dto';
 import { UserService } from 'src/users/users.service';
 import bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { Payload } from './interfaces/payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +19,7 @@ export class AuthService {
     const isValid = await bcrypt.compare(data.password, user.passwordHash);
     if (!isValid) throw new UnauthorizedException();
 
-    const payload = {
+    const payload: Payload = {
       sub: user.id,
       email: user.email,
       role: user.roleId,

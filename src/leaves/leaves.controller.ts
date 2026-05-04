@@ -1,11 +1,12 @@
 import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
 import { LeavesService } from './leaves.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UpdateLeaveStatus } from './dto/update-leave-status.dto';
 
 @Controller('leave-requests')
 @ApiTags('Leaves')
+@ApiBearerAuth()
 export class LeavesController {
   constructor(private leavesService: LeavesService) {}
 
