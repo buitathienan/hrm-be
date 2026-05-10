@@ -19,10 +19,14 @@ export class AuthService {
     const isValid = await bcrypt.compare(data.password, user.passwordHash);
     if (!isValid) throw new UnauthorizedException();
 
+    const userPermissions = user.role.rolePermissions.map(
+      (rp) => `${rp.permission.action}_${rp.permission.resource}`,
+    );
     const payload: Payload = {
       sub: user.id,
       email: user.email,
-      role: user.roleId,
+      role: user.role.name,
+      permissions: userPermissions,
     };
 
     return {

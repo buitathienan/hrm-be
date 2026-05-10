@@ -21,27 +21,53 @@ async function main() {
   // ---------------------------------------------------------------------------
   // ROLE & PERMISSION
   // ---------------------------------------------------------------------------
-  const role = await prisma.role.create({
-    data: {
-      name: 'HR Admin',
-      description: 'Toàn quyền quản lý nhân sự',
-    },
-  });
-
-  const permission = await prisma.permission.create({
-    data: {
+  const permissionsData = [
+    {
       resource: 'employees',
-      action: 'manage',
-      description: 'Tạo, xem, sửa, xoá hồ sơ nhân viên',
+      action: 'create',
+      description: 'Tạo hồ sơ nhân viên',
+    },
+    {
+      resource: 'employees',
+      action: 'read',
+      description: 'Xem hồ sơ nhân viên',
+    },
+    {
+      resource: 'employees',
+      action: 'update',
+      description: 'Cập nhật hồ sơ nhân viên',
+    },
+    {
+      resource: 'employees',
+      action: 'delete',
+      description: 'Xoá hồ sơ nhân viên',
+    },
+  ];
+
+  // 2. Create permissions and capture the returned records (with their IDs)
+  const createdPermissions = await Promise.all(
+    permissionsData.map((data) =>
+      prisma.permission.create({
+        data: data,
+      }),
+    ),
+  );
+
+  // 3. Create the Role and assign all permissions at once
+  const hrRole = await prisma.role.create({
+    data: {
+      name: 'HR_MANAGER',
+      description: 'Human Resources Manager',
+
+      rolePermissions: {
+        create: createdPermissions.map((permission) => ({
+          permissionId: permission.id,
+        })),
+      },
     },
   });
 
-  await prisma.rolePermission.create({
-    data: {
-      roleId: role.id,
-      permissionId: permission.id,
-    },
-  });
+  console.log('Seeded Role with Permissions:', hrRole);
 
   // ---------------------------------------------------------------------------
   // USER
@@ -51,7 +77,7 @@ async function main() {
       email: 'alice@hrm.com',
       passwordHash: await bcrypt.hash('123456aA', 10),
       isActive: true,
-      roleId: role.id,
+      roleId: hrRole.id,
     },
   });
 

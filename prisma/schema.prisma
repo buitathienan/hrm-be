@@ -188,7 +188,7 @@ model Role {
   updatedAt   DateTime     @updatedAt
 
   users       User[]
-  permissions RolePermission[]
+  rolePermissions RolePermission[]
 
 }
 
@@ -198,7 +198,7 @@ model Permission {
   action      String
   description String?
 
-  roles       RolePermission[]
+  rolePermissions RolePermission[]
 
   @@unique([resource, action])
 }
