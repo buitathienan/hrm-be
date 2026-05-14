@@ -6,11 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { EmployeesService } from './employees.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { PaginationQuery } from 'src/common/dto/pagination-query.dto';
 
 @ApiTags('Employees')
 @Controller('employees')
@@ -24,8 +26,8 @@ export class EmployeesController {
   }
 
   @Get()
-  async getAll() {
-    return this.employeeService.findAll();
+  async getAll(@Query() paginationQuery: PaginationQuery) {
+    return this.employeeService.findAll(paginationQuery);
   }
 
   @Get(':id')
