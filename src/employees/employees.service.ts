@@ -37,7 +37,7 @@ export class EmployeesService {
         take: limit,
         where,
       }),
-      this.prisma.employee.count(),
+      this.prisma.employee.count({ where }),
     ]);
 
     const meta: PageMeta = {
