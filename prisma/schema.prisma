@@ -78,6 +78,13 @@ enum PayFrequency {
   ANNUALLY
 }
 
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  HALF_DAY
+}
+
 model Department {
   id String @id @default(uuid(7))
   name String
@@ -145,7 +152,7 @@ model Employee {
   leaveApprovals LeaveRequest[] @relation("LeaveApprover")
     attendance       Attendance[]
     scheduleId String?
-  schedule ShiftSchedule? @relation(fields: [scheduleId], references: [id])
+  schedules ShiftSchedule[]
   assets           AssetAssignment[]
   salaryHistory SalaryHistory[]
   payrollInfo PayrollInfo?
@@ -284,8 +291,7 @@ model Attendance {
   checkOut       DateTime?
   hoursWorked    Decimal?  @db.Decimal(5, 2)
   overtimeHours  Decimal?  @db.Decimal(5, 2)
-  isLate         Boolean   @default(false)
-  isAbsent       Boolean   @default(false)
+  status AttendanceStatus @default(PRESENT)
   notes          String?
   source         String?   // BIOMETRIC, MANUAL, MOBILE, WEB
   createdAt      DateTime  @default(now())
@@ -315,10 +321,11 @@ model ShiftSchedule {
   shiftId    String
   startDate  DateTime
   endDate    DateTime?
+  employeeId String
   createdAt  DateTime @default(now())
 
   shift      Shift    @relation(fields: [shiftId], references: [id])
-  employee       Employee[] 
+  employee Employee @relation(fields: [employeeId], references: [id])
 }
 
 model Asset {

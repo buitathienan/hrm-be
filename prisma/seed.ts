@@ -1,13 +1,8 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
-  AssetStatus,
   EmploymentStatus,
   EmploymentType,
-  Gender,
   LeaveCategory,
-  LeaveStatus,
-  PayFrequency,
-  PayType,
   PrismaClient,
 } from 'src/generated/prisma/client';
 import bcrypt from 'bcrypt';
@@ -16,346 +11,238 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Starting database seeding...');
 
-  // ---------------------------------------------------------------------------
-  // ROLE & PERMISSION
-  // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------
+  // 1. Create Permissions (Using Promise.all for guaranteed IDs)
+  // ---------------------------------------------------------
   const permissionsData = [
     {
       resource: 'employees',
       action: 'create',
-      description: 'Tạo hồ sơ nhân viên',
+      description: 'Create employee records',
     },
     {
       resource: 'employees',
       action: 'read',
-      description: 'Xem hồ sơ nhân viên',
+      description: 'View employee records',
     },
     {
       resource: 'employees',
       action: 'update',
-      description: 'Cập nhật hồ sơ nhân viên',
+      description: 'Update employee records',
     },
     {
       resource: 'employees',
       action: 'delete',
-      description: 'Xoá hồ sơ nhân viên',
+      description: 'Delete employee records',
+    },
+    {
+      resource: 'leave_requests',
+      action: 'approve',
+      description: 'Approve or reject leave requests',
+    },
+    {
+      resource: 'leave_requests',
+      action: 'create',
+      description: 'Create own leave requests',
+    },
+    {
+      resource: 'leave_requests',
+      action: 'read',
+      description: 'View own leave requests',
     },
   ];
 
-  // 2. Create permissions and capture the returned records (with their IDs)
+  console.log('Creating Permissions...');
+  // We use upsert so you can safely run the seed script multiple times without crashing
   const createdPermissions = await Promise.all(
-    permissionsData.map((data) =>
-      prisma.permission.create({
-        data: data,
+    permissionsData.map((p) =>
+      prisma.permission.upsert({
+        where: { resource_action: { resource: p.resource, action: p.action } },
+        update: {},
+        create: p,
       }),
     ),
   );
 
-  // 3. Create the Role and assign all permissions at once
-  const hrRole = await prisma.role.create({
-    data: {
+  // ---------------------------------------------------------
+  // 2. Create Roles & Connect Permissions
+  // ---------------------------------------------------------
+  console.log('Creating Roles...');
+
+  // HR gets everything
+  const hrPermissions = createdPermissions.map((p) => ({ permissionId: p.id }));
+
+  // Standard Employees only get specific leave request access
+  const employeePermissions = createdPermissions
+    .filter(
+      (p) =>
+        p.resource === 'leave_requests' &&
+        (p.action === 'create' || p.action === 'read'),
+    )
+    .map((p) => ({ permissionId: p.id }));
+
+  const hrRole = await prisma.role.upsert({
+    where: { name: 'HR_MANAGER' },
+    update: {},
+    create: {
       name: 'HR_MANAGER',
       description: 'Human Resources Manager',
-
       rolePermissions: {
-        create: createdPermissions.map((permission) => ({
-          permissionId: permission.id,
-        })),
+        create: hrPermissions, // Prisma's nested write links them atomically
       },
     },
   });
 
-  console.log('Seeded Role with Permissions:', hrRole);
+  const empRole = await prisma.role.upsert({
+    where: { name: 'EMPLOYEE' },
+    update: {},
+    create: {
+      name: 'EMPLOYEE',
+      description: 'Standard Employee',
+      rolePermissions: {
+        create: employeePermissions,
+      },
+    },
+  });
 
-  // ---------------------------------------------------------------------------
-  // USER
-  // ---------------------------------------------------------------------------
-  const user = await prisma.user.create({
-    data: {
-      email: 'alice@hrm.com',
-      passwordHash: await bcrypt.hash('123456aA', 10),
-      isActive: true,
+  // ---------------------------------------------------------
+  // 3. Create Departments & Positions
+  // ---------------------------------------------------------
+  console.log('Creating Departments and Positions...');
+  const engineeringDept = await prisma.department.upsert({
+    where: { code: 'ENG' },
+    update: {},
+    create: {
+      name: 'Engineering',
+      code: 'ENG',
+      description: 'Software Development Team',
+      positions: {
+        create: [
+          { title: 'Frontend Developer' },
+          { title: 'Backend Developer' },
+        ],
+      },
+    },
+  });
+
+  const hrDept = await prisma.department.upsert({
+    where: { code: 'HR' },
+    update: {},
+    create: {
+      name: 'Human Resources',
+      code: 'HR',
+      description: 'HR and Operations',
+      positions: {
+        create: [{ title: 'HR Manager' }],
+      },
+    },
+  });
+
+  // Extract positions to assign to employees later
+  const hrManagerPosition = await prisma.position.findFirst({
+    where: { title: 'HR Manager' },
+  });
+  const backendPosition = await prisma.position.findFirst({
+    where: { title: 'Backend Developer' },
+  });
+
+  console.log('Creating Employees & User Accounts...');
+  const defaultPassword = await bcrypt.hash('123456aA', 10);
+
+  // 1. Create the Users first
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@hrm.com' },
+    update: {},
+    create: {
+      email: 'admin@hrm.com',
+      passwordHash: defaultPassword,
       roleId: hrRole.id,
     },
   });
 
-  // ---------------------------------------------------------------------------
-  // DEPARTMENT (chưa có head — vòng phụ thuộc với Employee)
-  // ---------------------------------------------------------------------------
-  const department = await prisma.department.create({
-    data: {
-      name: 'Kỹ thuật',
-      code: 'ENG',
-      description: 'Phòng phát triển phần mềm',
+  const standardUser = await prisma.user.upsert({
+    where: { email: 'john.doe@hrm.com' },
+    update: {},
+    create: {
+      email: 'john.doe@hrm.com',
+      passwordHash: defaultPassword,
+      roleId: empRole.id,
     },
   });
 
-  // ---------------------------------------------------------------------------
-  // POSITION
-  // ---------------------------------------------------------------------------
-  const position = await prisma.position.create({
-    data: {
-      title: 'Senior Software Engineer',
-      code: 'SWE-SR',
-      departmentId: department.id,
-      minSalary: 30000000,
-      maxSalary: 60000000,
-      isActive: true,
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // SHIFT & SHIFT SCHEDULE
-  // ---------------------------------------------------------------------------
-  const shift = await prisma.shift.create({
-    data: {
-      name: 'Ca sáng',
-      startTime: '08:00',
-      endTime: '17:00',
-      breakMins: 60,
-      isActive: true,
-    },
-  });
-
-  const shiftSchedule = await prisma.shiftSchedule.create({
-    data: {
-      shiftId: shift.id,
-      startDate: new Date('2025-01-01'),
-      endDate: new Date('2025-12-31'),
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // EMPLOYEE
-  // ---------------------------------------------------------------------------
-  const employee = await prisma.employee.create({
-    data: {
+  // 2. Create the Employees using the raw scalar IDs
+  const adminEmployee = await prisma.employee.upsert({
+    where: { email: 'admin@hrm.com' },
+    update: {},
+    create: {
       employeeNumber: 'EMP-001',
-      firstName: 'Alice',
-      lastName: 'Nguyễn',
-      email: 'alice.nguyen@personal.com',
-      workEmail: 'alice@hrm.com',
-      phone: '+84901234567',
-      dateOfBirth: new Date('1992-05-15'),
-      gender: Gender.FEMALE,
-      hireDate: new Date('2022-03-01'),
-      probationEnd: new Date('2022-06-01'),
-      confirmationDate: new Date('2022-06-02'),
+      firstName: 'Sarah',
+      lastName: 'Connor',
+      email: 'admin@hrm.com',
+      hireDate: new Date('2022-01-15'),
       employmentType: EmploymentType.FULL_TIME,
       employmentStatus: EmploymentStatus.ACTIVE,
-      positionId: position.id,
-      departmentId: department.id,
-      userId: user.id,
-      scheduleId: shiftSchedule.id,
-      address: '123 Lê Lợi, Quận 1, TP. Hồ Chí Minh',
+      departmentId: hrDept.id,
+      positionId: hrManagerPosition?.id,
+      userId: adminUser.id, // <-- Using the scalar ID cleanly
     },
   });
 
-  // ---------------------------------------------------------------------------
-  // DEPARTMENT — cập nhật headId sau khi employee đã tồn tại
-  // ---------------------------------------------------------------------------
-  await prisma.department.update({
-    where: { id: department.id },
-    data: { headId: employee.id },
+  const standardEmployee = await prisma.employee.upsert({
+    where: { email: 'john.doe@hrm.com' },
+    update: {},
+    create: {
+      employeeNumber: 'EMP-002',
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@hrm.com',
+      hireDate: new Date('2024-03-01'),
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+      departmentId: engineeringDept.id,
+      positionId: backendPosition?.id,
+      userId: standardUser.id, // <-- Using the scalar ID cleanly
+    },
   });
+  console.log('Creating Leave Policies...');
+  const currentYear = new Date().getFullYear();
 
-  // ---------------------------------------------------------------------------
-  // BANK ACCOUNT
-  // ---------------------------------------------------------------------------
-  await prisma.bankAccount.create({
-    data: {
-      employeeId: employee.id,
-      accountName: 'NGUYEN THI ALICE',
-      accountNumber: '0123456789',
-      currency: 'VND',
+  // We use findFirst to check if it exists so we don't duplicate on re-seeds
+  let annualLeave = await prisma.leaveType.findFirst({
+    where: { name: 'Annual Leave' },
+  });
+  if (!annualLeave) {
+    annualLeave = await prisma.leaveType.create({
+      data: {
+        name: 'Annual Leave',
+        category: LeaveCategory.ANNUAL,
+        isPaid: true,
+      },
+    });
+  }
+
+  // Grant 15 days of annual leave to John Doe
+  await prisma.leaveBalance.upsert({
+    where: {
+      employeeId_leaveTypeId_year: {
+        employeeId: standardEmployee.id,
+        leaveTypeId: annualLeave.id,
+        year: currentYear,
+      },
+    },
+    update: {},
+    create: {
+      employeeId: standardEmployee.id,
+      leaveTypeId: annualLeave.id,
+      year: currentYear,
+      entitled: 15,
+      used: 0,
     },
   });
 
-  // ---------------------------------------------------------------------------
-  // LEAVE TYPE & BALANCE & REQUEST
-  // ---------------------------------------------------------------------------
-  const leaveType = await prisma.leaveType.create({
-    data: {
-      name: 'Nghỉ phép năm',
-      category: LeaveCategory.ANNUAL,
-      isPaid: true,
-      isActive: true,
-      requiresApproval: true,
-    },
-  });
-
-  await prisma.leaveBalance.create({
-    data: {
-      employeeId: employee.id,
-      leaveTypeId: leaveType.id,
-      year: 2025,
-      entitled: 12,
-      used: 2,
-      pending: 1,
-      carriedOver: 3,
-    },
-  });
-
-  await prisma.leaveRequest.create({
-    data: {
-      employeeId: employee.id,
-      leaveTypeId: leaveType.id,
-      startDate: new Date('2025-04-10'),
-      endDate: new Date('2025-04-11'),
-      totalDays: 2,
-      reason: 'Nghỉ du lịch gia đình',
-      status: LeaveStatus.APPROVED,
-      approverId: employee.id, // tự duyệt cho mục đích seed
-      approvedAt: new Date('2025-04-08'),
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // PUBLIC HOLIDAY
-  // ---------------------------------------------------------------------------
-  await prisma.publicHoliday.create({
-    data: {
-      name: 'Ngày Thống Nhất',
-      date: new Date('2025-04-30'),
-      isActive: true,
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // ATTENDANCE
-  // ---------------------------------------------------------------------------
-  await prisma.attendance.create({
-    data: {
-      employeeId: employee.id,
-      date: new Date('2025-04-01'),
-      checkIn: new Date('2025-04-01T08:02:00'),
-      checkOut: new Date('2025-04-01T17:05:00'),
-      hoursWorked: 8.05,
-      overtimeHours: 0,
-      isLate: false,
-      isAbsent: false,
-      source: 'WEB',
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // ASSET & ASSIGNMENT
-  // ---------------------------------------------------------------------------
-  const asset = await prisma.asset.create({
-    data: {
-      name: 'MacBook Pro 14-inch',
-      category: 'Laptop',
-      serialNumber: 'C02XK1HJJGH6',
-      brand: 'Apple',
-      model: 'MacBook Pro M3 Pro',
-      purchaseDate: new Date('2024-01-15'),
-      purchaseCost: 45000000,
-      status: AssetStatus.ASSIGNED,
-      notes: 'Thiết bị cấp phát của công ty',
-    },
-  });
-
-  await prisma.assetAssignment.create({
-    data: {
-      assetId: asset.id,
-      employeeId: employee.id,
-      assignedAt: new Date('2024-01-20'),
-      condition: 'New',
-      notes: 'Cấp phát đầu Q1 2024',
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // PAYROLL INFO, ALLOWANCE, DEDUCTION
-  // ---------------------------------------------------------------------------
-  const payrollInfo = await prisma.payrollInfo.create({
-    data: {
-      employeeId: employee.id,
-      payType: PayType.SALARY,
-      payFrequency: PayFrequency.MONTHLY,
-      baseSalary: 45000000,
-      currency: 'VND',
-      taxCode: 'TX-001',
-      taxExemptions: 1,
-    },
-  });
-
-  await prisma.allowance.create({
-    data: {
-      payrollInfoId: payrollInfo.id,
-      name: 'Phụ cấp ăn trưa',
-      amount: 730000,
-      isTaxable: false,
-      isRecurring: true,
-    },
-  });
-
-  await prisma.deduction.create({
-    data: {
-      payrollInfoId: payrollInfo.id,
-      name: 'Bảo hiểm xã hội',
-      percentage: 8,
-      isPreTax: true,
-      isRecurring: true,
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // SALARY HISTORY
-  // ---------------------------------------------------------------------------
-  await prisma.salaryHistory.create({
-    data: {
-      employeeId: employee.id,
-      oldSalary: 38000000,
-      newSalary: 45000000,
-      currency: 'VND',
-      effectiveAt: new Date('2024-01-01'),
-      reason: 'Tăng lương định kỳ hàng năm',
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // PAYROLL RUN, PAYSLIP & LINE ITEM
-  // ---------------------------------------------------------------------------
-  const payrollRun = await prisma.payrollRun.create({
-    data: {
-      periodStart: new Date('2025-03-01'),
-      periodEnd: new Date('2025-03-31'),
-      payDate: new Date('2025-04-05'),
-      status: 'COMPLETED',
-      totalGross: 45730000,
-      totalNet: 40000000,
-      totalTax: 2130000,
-      processedAt: new Date('2025-04-04'),
-    },
-  });
-
-  const payslip = await prisma.payslip.create({
-    data: {
-      employeeId: employee.id,
-      payrollRunId: payrollRun.id,
-      grossPay: 45730000,
-      netPay: 40000000,
-      totalAllowance: 730000,
-      totalDeduction: 3600000,
-      totalTax: 2130000,
-      currency: 'VND',
-      paidAt: new Date('2025-04-05'),
-    },
-  });
-
-  await prisma.payslipLineItem.create({
-    data: {
-      payslipId: payslip.id,
-      name: 'Lương cơ bản',
-      type: 'EARNING',
-      amount: 45000000,
-    },
-  });
-
-  console.log('✅ Seed hoàn tất! User: alice@hrm.com Pass:123456aA');
+  console.log('✅ Seeding completed successfully!');
 }
 
 main()
