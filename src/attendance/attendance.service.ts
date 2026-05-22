@@ -13,31 +13,11 @@ export class AttendanceService {
   constructor(private prisma: PrismaService) {}
 
   async checkIn(employeeId: string, data: CheckInDto) {
+    console.log('Check-in data:', { employeeId, ...data });
     const now = new Date();
     const today = new Date(now.setHours(0, 0, 0, 0));
 
     if (data.latitude && data.longitude) {
-      const distance = calculateDistance(
-        data.latitude,
-        data.longitude,
-        10.7626, // Ho Chi Minh City
-        106.6601,
-      );
-
-      if (distance > 100)
-        throw new ForbiddenException(
-          'You are not within the allowed office radius',
-        );
-
-      const checkIn = await this.prisma.attendance.findFirst({
-        where: {
-          date: today,
-          employeeId,
-        },
-      });
-      if (checkIn)
-        throw new ConflictException('You have already clocked in today.');
-
       const currentShift = await this.prisma.shiftSchedule.findFirst({
         where: {
           AND: [{ startDate: { gte: today } }, { endDate: { lte: today } }],
@@ -53,12 +33,47 @@ export class AttendanceService {
           'No shift found for today. Cannot clock in',
         );
 
+      const checkIn = await this.prisma.attendance.findFirst({
+        where: {
+          date: today,
+          employeeId,
+        },
+      });
+      if (checkIn)
+        throw new ConflictException('You have already clocked in today.');
+
+      const distance = calculateDistance(
+        data.latitude,
+        data.longitude,
+        10.7626, // Ho Chi Minh City
+        106.6601,
+      );
+
+      if (distance > 2000)
+        throw new ForbiddenException(
+          'You are not within the allowed office radius',
+        );
+
       const startTime = currentShift.shift.startTime;
       const [hours, minutes] = startTime.split(':').map(Number);
       const expectedTime = new Date(now);
+      let status: AttendanceStatus = AttendanceStatus.PRESENT;
       expectedTime.setHours(hours, minutes, 0, 0);
+
       if (now > expectedTime) {
+        status = AttendanceStatus.LATE;
       }
+
+      return this.prisma.attendance.create({
+        data: {
+          employeeId,
+          date: today,
+          checkIn: now,
+          status,
+          source: data.source,
+          notes: data.notes,
+        },
+      });
     }
   }
 }

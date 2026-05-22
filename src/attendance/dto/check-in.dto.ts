@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CheckInDto {
@@ -14,13 +14,11 @@ export class CheckInDto {
   })
   source: string;
 
-  @IsOptional()
-  @ApiPropertyOptional()
+  @ApiProperty()
   @IsNumber()
   latitude: number;
 
-  @IsOptional()
-  @ApiPropertyOptional()
+  @ApiProperty()
   @IsNumber()
   longitude: number;
 }
