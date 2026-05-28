@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'src/database/prisma.service';
 import { CheckInDto } from './dto/check-in.dto';
 import { AttendanceStatus } from 'src/generated/prisma/enums';
+import { CheckOutDto } from './dto/check-out.dto';
 
 @Injectable()
 export class AttendanceService {
@@ -86,6 +87,42 @@ export class AttendanceService {
         notes: data.notes,
       },
     });
+  }
+
+  async checkOut(employeeId: string, data: CheckOutDto) {
+    if (!data.latitude || !data.longitude) {
+      throw new BadRequestException(
+        'Location coordinates are required to clock out.',
+      );
+    }
+
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    const distance = calculateDistance(
+      data.latitude,
+      data.longitude,
+      10.7626,
+      106.6601,
+    );
+    if (distance > 2000) {
+      // 2000m mean 2km
+      throw new ForbiddenException(
+        'You are not within the allowed office radius.',
+      );
+    }
+
+    const checkIn = await this.prisma.attendance.findFirst({
+      where: {
+        date: today,
+        employeeId,
+      },
+    });
+
+    if (!checkIn) throw new BadRequestException('You never clocked in today.');
+    else if (checkIn.checkOut)
+      throw new BadRequestException('You have already clocked out today.');
   }
 }
 
