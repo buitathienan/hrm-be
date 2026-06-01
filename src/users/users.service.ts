@@ -12,6 +12,7 @@ export class UserService {
         role: {
           include: { rolePermissions: { include: { permission: true } } },
         },
+        employee: true,
       },
     });
   }

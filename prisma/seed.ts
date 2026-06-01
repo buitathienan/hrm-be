@@ -241,6 +241,46 @@ async function main() {
       used: 0,
     },
   });
+  // ---------------------------------------------------------
+  // 6. Create Shifts and Schedules for 2026
+  // ---------------------------------------------------------
+  console.log('Creating Shifts & Schedules...');
+
+  // 1. Create a baseline Shift
+  // We use findFirst to check if it exists so we don't duplicate on re-seeds
+  let dayShift = await prisma.shift.findFirst({
+    where: { name: 'Standard Day Shift' },
+  });
+  if (!dayShift) {
+    dayShift = await prisma.shift.create({
+      data: {
+        name: 'Standard Day Shift',
+        startTime: '09:00', // Matches your string format
+        endTime: '17:00',
+        breakMins: 60,
+      },
+    });
+  }
+
+  // 2. Assign the shift to John Doe for the entire year of 2026
+  let existingSchedule = await prisma.shiftSchedule.findFirst({
+    where: {
+      employeeId: standardEmployee.id, // Using the employee we created in Step 4
+      shiftId: dayShift.id,
+      startDate: new Date('2026-01-01T00:00:00Z'),
+    },
+  });
+
+  if (!existingSchedule) {
+    await prisma.shiftSchedule.create({
+      data: {
+        employeeId: standardEmployee.id,
+        shiftId: dayShift.id,
+        startDate: new Date('2026-01-01T00:00:00Z'),
+        endDate: new Date('2026-12-31T23:59:59Z'), // Spans the entirety of 2026
+      },
+    });
+  }
 
   console.log('✅ Seeding completed successfully!');
 }

@@ -20,18 +20,13 @@ export class AttendanceService {
       );
     }
 
-    const now = new Date();
-    const today = new Date(now);
+    const now = new Date(); // Time
+    const today = new Date(); // Date
     today.setHours(0, 0, 0, 0);
 
-    const distance = calculateDistance(
-      data.latitude,
-      data.longitude,
-      10.7626,
-      106.6601,
-    );
-    if (distance > 2000) {
-      // 2000m mean 2km
+    const distance = calculateDistance(data.latitude, data.longitude, 1, 1);
+    if (distance > 500) {
+      // 509 mean 500m
       throw new ForbiddenException(
         'You are not within the allowed office radius.',
       );
@@ -100,14 +95,9 @@ export class AttendanceService {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
-    const distance = calculateDistance(
-      data.latitude,
-      data.longitude,
-      10.7626,
-      106.6601,
-    );
-    if (distance > 2000) {
-      // 2000m mean 2km
+    const distance = calculateDistance(data.latitude, data.longitude, 1, 1);
+    if (distance > 500) {
+      // 500 mean 500m
       throw new ForbiddenException(
         'You are not within the allowed office radius.',
       );
@@ -120,9 +110,22 @@ export class AttendanceService {
       },
     });
 
-    if (!checkIn) throw new BadRequestException('You never clocked in today.');
+    if (!checkIn?.checkIn)
+      throw new BadRequestException('You never clocked in today.');
     else if (checkIn.checkOut)
       throw new BadRequestException('You have already clocked out today.');
+
+    const rawHours =
+      (now.getTime() - checkIn.checkIn?.getTime()) / (1000 * 60 * 60);
+    return this.prisma.attendance.update({
+      where: {
+        id: checkIn.id,
+      },
+      data: {
+        checkOut: now,
+        hoursWorked: rawHours,
+      },
+    });
   }
 }
 
