@@ -282,6 +282,62 @@ async function main() {
     });
   }
 
+  console.log('Creating payroll...');
+  const john = await prisma.employee.findUnique({
+    where: {
+      email: 'john.doe@hrm.com',
+    },
+  });
+  if (john) {
+    await prisma.payrollInfo.upsert({
+      where: { employeeId: john.id },
+      update: {},
+      create: {
+        employeeId: john.id,
+        payType: 'SALARY',
+        payFrequency: 'MONTHLY',
+        baseSalary: 5000000,
+        currency: 'VND',
+        taxCode: 'TAX-123456789',
+        taxExemptions: 1, // e.g., 1 dependent
+
+        allowances: {
+          create: [
+            {
+              name: 'Internet Allowance',
+              amount: 500000,
+              isTaxable: false,
+              isRecurring: true,
+            },
+            {
+              name: 'Lunch Allowance',
+              amount: 1000000,
+              isTaxable: true,
+              isRecurring: true,
+            },
+          ],
+        },
+        deductions: {
+          create: [
+            {
+              name: 'Health Insurance',
+              percentage: 1.5,
+              isPreTax: true,
+              isRecurring: true,
+            },
+            {
+              name: 'Social Insurance',
+              percentage: 8.0,
+              isPreTax: true,
+              isRecurring: true,
+            },
+          ],
+        },
+      },
+    });
+  }
+  console.log('✅ Payroll Info seeded successfully');
+
   console.log('✅ Seeding completed successfully!');
 }
 
