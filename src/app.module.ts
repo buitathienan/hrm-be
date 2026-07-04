@@ -7,6 +7,7 @@ import { EmployeesModule } from './employees/employees.module';
 import { LeaveModule } from './leaves/leaves.module';
 import { AuthModule } from './auth/auth.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { PayrollModule } from './payroll/payroll.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     LeaveModule,
     AuthModule,
     AttendanceModule,
+    PayrollModule,
   ],
   controllers: [],
   providers: [],
