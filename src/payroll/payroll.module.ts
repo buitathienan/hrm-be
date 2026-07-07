@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { PayrollService } from './payroll.service';
+import { PayrollController } from './payroll.controller';
 
 @Module({
-  controllers: [],
+  controllers: [PayrollController],
   providers: [PayrollService],
   exports: [PayrollService],
 })

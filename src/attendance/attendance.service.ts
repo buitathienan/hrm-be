@@ -127,6 +127,14 @@ export class AttendanceService {
       },
     });
   }
+
+  async findAll() {
+    return this.prisma.attendance.findMany();
+  }
+
+  async findByEmployeeId(id: string) {
+    return this.prisma.attendance.findFirst({ where: { employeeId: id } });
+  }
 }
 
 // Haversine mathematical formula use for calculate distance

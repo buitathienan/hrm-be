@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service';
 import { CheckInDto } from './dto/check-in.dto';
@@ -18,5 +18,15 @@ export class AttendanceController {
   @Post('clockout')
   async clockOut(@Body() checkOutDto: CheckOutDto, @Req() req: any) {
     return this.attendanceService.checkOut(req.user.employeeId, checkOutDto);
+  }
+
+  @Get()
+  async findAll() {
+    return this.attendanceService.findAll();
+  }
+
+  @Get(':id')
+  async findByEmployeeId(@Param('id') id: string) {
+    return this.attendanceService.findByEmployeeId(id);
   }
 }
