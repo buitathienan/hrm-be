@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { GeneratePayrollDto } from './dto/generative-payroll.dto';
 import { PrismaService } from 'src/database/prisma.service';
+import { PayType } from 'src/generated/prisma/enums';
 
 @Injectable()
 export class PayrollService {
   constructor(private prisma: PrismaService) {}
+
   async draftPayrollRun(dto: GeneratePayrollDto, processedById: string) {
     const employees = await this.prisma.employee.findMany({
       where: {
@@ -23,24 +25,37 @@ export class PayrollService {
     });
 
     for (const employee of employees) {
-      const attendanceAgg = await this.prisma.attendance.aggregate({
-        where: {
-          date: {
-            gte: dto.periodStart,
-            lte: dto.periodEnd,
-          },
-          employeeId: employee.id,
-        },
-        _sum: { hoursWorked: true },
-      });
-
-      // If they didn't work any hours, it returns null, fallback to 0
-      const totalWorkedHours = Number(attendanceAgg._sum || 0);
-      console.log(`Caculating for emp id: ${employee.id}`);
-      console.log(`Total hours worked: ${totalWorkedHours}`);
-      console.log(
-        `Base salary: ${employee.payrollInfo?.baseSalary.toString()}`,
+      const payslip = await this.caculateEmployeePayroll(
+        dto.periodStart,
+        dto.periodEnd,
+        employee.id,
+        employee.payrollInfo?.payType,
       );
+    }
+  }
+
+  private async caculateEmployeePayroll(
+    periodStart: Date,
+    periodEnd: Date,
+    employeeId: string,
+    payType: PayType | undefined,
+  ) {
+    const attendanceAgg = await this.prisma.attendance.aggregate({
+      where: {
+        date: {
+          gte: periodStart,
+          lte: periodEnd,
+        },
+        employeeId,
+      },
+      _sum: { hoursWorked: true },
+    });
+
+    // If they didn't work any hours, it returns null, fallback to 0
+    const totalWorkedHours = Number(attendanceAgg._sum.hoursWorked) || 0;
+
+    switch (payType) {
+      case 'HOURLY':
     }
   }
 }
