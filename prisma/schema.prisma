@@ -366,9 +366,8 @@ model PayrollInfo {
   payFrequency PayFrequency @default(MONTHLY)
   baseSalary Decimal @db.Decimal(15, 2)
   currency String @default("VND")
-  taxId String?
-  taxCode String?
-  taxExemptions Int @default(0)
+  effectiveFrom DateTime
+  effectiveTo DateTime?
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   deductions Deduction[]
   allowances Allowance[]
