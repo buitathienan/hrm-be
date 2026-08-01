@@ -298,8 +298,7 @@ async function main() {
         payFrequency: 'MONTHLY',
         baseSalary: 5000000,
         currency: 'VND',
-        taxCode: 'TAX-123456789',
-        taxExemptions: 1, // e.g., 1 dependent
+        effectiveFrom: new Date(),
 
         allowances: {
           create: [
