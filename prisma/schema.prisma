@@ -66,8 +66,6 @@ enum AssetStatus {
 enum PayType {
   SALARY
   HOURLY
-  COMMISSION
-  MIXED
 }
 
 enum PayFrequency {
@@ -83,6 +81,33 @@ enum AttendanceStatus {
   LATE
   ABSENT
   HALF_DAY
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  CALCULATING
+  CALCULATED
+  APPROVED
+  FINALIZED
+  CANCELLED
+}
+
+enum AllowanceCalculationType {
+  FIXED
+  PERCENTAGE
+}
+
+enum DeductionCalculationType {
+  FIXED
+  PERCENTAGE
+  PER_DAY
+  PER_HOUR
+}
+
+enum PayrollItemType {
+  EARNING
+  DEDUCTION
+  TAX
 }
 
 model Department {
@@ -155,7 +180,8 @@ model Employee {
   schedules ShiftSchedule[]
   assets           AssetAssignment[]
   salaryHistory SalaryHistory[]
-  payrollInfo PayrollInfo?
+  employeeCompensation EmployeeCompensation[]
+  payrollCalculations PayrollCalculation[]
   payslips Payslip[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -173,7 +199,7 @@ model BankAccount {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid(7))
   email        String   @unique
   passwordHash String
   refreshToken String?
@@ -188,7 +214,7 @@ model User {
 }
 
 model Role {
-  id          String       @id @default(cuid())
+  id          String       @id @default(uuid(7))
   name        String       @unique
   description String?
   createdAt   DateTime     @default(now())
@@ -200,7 +226,7 @@ model Role {
 }
 
 model Permission {
-  id          String           @id @default(cuid())
+  id          String           @id @default(uuid(7))
   resource    String
   action      String
   description String?
@@ -284,7 +310,7 @@ model PublicHoliday {
 }
 
 model Attendance {
-  id             String    @id @default(cuid())
+  id             String    @id @default(uuid(7))
   employeeId     String
   date           DateTime  @db.Date
   checkIn        DateTime?
@@ -303,7 +329,7 @@ model Attendance {
 }
 
 model Shift {
-  id         String   @id @default(cuid())
+  id         String   @id @default(uuid(7))
   name       String
   startTime  String   // HH:mm format
   endTime    String
@@ -317,7 +343,7 @@ model Shift {
 }
 
 model ShiftSchedule {
-  id         String   @id @default(cuid())
+  id         String   @id @default(uuid(7))
   shiftId    String
   startDate  DateTime
   endDate    DateTime?
@@ -329,7 +355,7 @@ model ShiftSchedule {
 }
 
 model Asset {
-  id           String           @id @default(cuid())
+  id           String           @id @default(uuid(7))
   name         String
   category     String
   serialNumber String?          @unique
@@ -347,7 +373,7 @@ model Asset {
 }
 
 model AssetAssignment {
-  id           String    @id @default(cuid())
+  id           String    @id @default(uuid(7))
   assetId      String
   employeeId   String
   assignedAt   DateTime  @default(now())
@@ -359,21 +385,25 @@ model AssetAssignment {
   employee     Employee  @relation(fields: [employeeId], references: [id])
 }
 
-model PayrollInfo {
+model EmployeeCompensation {
   id String @id @default(uuid(7))
-  employeeId String @unique
-  payType PayType @default(SALARY)
-  payFrequency PayFrequency @default(MONTHLY)
-  baseSalary Decimal @db.Decimal(15, 2)
-  currency String @default("VND")
+  employeeId String
   effectiveFrom DateTime
   effectiveTo DateTime?
+  currency String @default("VND")
+  baseSalary Decimal @db.Decimal(15, 2)
+  payType PayType @default(SALARY)
+  payFrequency PayFrequency @default(MONTHLY)
+  deductions CompensationDeduction[]
+  allowances CompensationAllowance[]
+
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  deductions Deduction[]
-  allowances Allowance[]
-  
+
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+
+  @@index([employeeId, effectiveFrom])
+  @@index([employeeId, effectiveTo])
 }
 
 model SalaryHistory {
@@ -390,59 +420,130 @@ model SalaryHistory {
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
-model Allowance {
+model CompensationAllowance {
   id String @id @default(uuid(7))
-  payrollInfoId String
+  employeeCompensationId String
+  employeeCompensation EmployeeCompensation @relation(fields: [employeeCompensationId], references: [id], onDelete: Cascade)
   name String
-  amount Decimal @db.Decimal(15, 2)
+  amount Decimal? @db.Decimal(15, 2)
+  rate Decimal? @db.Decimal(8, 4)
+  calculationType AllowanceCalculationType
   isTaxable Boolean @default(true)
   isRecurring Boolean @default(true)
-  payrollInfo   PayrollInfo @relation(fields: [payrollInfoId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([employeeCompensationId])
 }
 
-model Deduction {
-  id            String      @id @default(cuid())
-  payrollInfoId String
+model CompensationDeduction {
+  id            String      @id @default(uuid(7))
+  employeeCompensationId String
   name          String
   amount        Decimal?    @db.Decimal(15, 2)
-  percentage    Decimal?    @db.Decimal(5, 2)
-  isPreTax      Boolean     @default(false)
+  calculationType DeductionCalculationType
+  rate   Decimal? @db.Decimal(8, 4)
   isRecurring   Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  payrollInfo   PayrollInfo @relation(fields: [payrollInfoId], references: [id], onDelete: Cascade)
+  employeeCompensation EmployeeCompensation @relation(fields: [employeeCompensationId], references: [id], onDelete: Cascade)
 }
 
-model PayrollRun {
-  id          String    @id @default(cuid())
+model PayrollPeriod {
+  id String @id @default(uuid(7))
   periodStart DateTime
   periodEnd   DateTime
   payDate     DateTime
-  status      String    @default("DRAFT") // DRAFT, PROCESSING, COMPLETED, CANCELLED
+  payrollRun PayrollRun[]
+}
+
+model PayrollRun {
+  id          String    @id @default(uuid(7))
+  payrollPeriodId String
+  payrollPeriod PayrollPeriod @relation(fields: [payrollPeriodId], references: [id])
+  status      PayrollRunStatus @default(DRAFT) 
   totalGross  Decimal   @db.Decimal(15, 2)
   totalNet    Decimal   @db.Decimal(15, 2)
   totalTax    Decimal   @db.Decimal(15, 2)
   notes       String?
   processedAt DateTime?
   processedById String?
+  calculationVersion String
+
+  calculations PayrollCalculation[]
+  payslips    Payslip[]
+  
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  payslips    Payslip[]
+  @@index([payrollPeriodId])
+  @@index([status])
+}
+/* This model can be used to store the results of payroll calculations, 
+such as gross pay, net pay, deductions, and taxes for each employee in a payroll run. 
+It can also include references to the payroll run and employee models for easy access to related data. */
+model PayrollCalculation {
+  id String @id @default(uuid(7))
+  
+  payrollRunId String
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
 
+  employeeId String
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  baseSalary Decimal @default(0) @db.Decimal(15, 2)
+
+  totalEarnings Decimal @default(0) @db.Decimal(15, 2)
+  grossPay Decimal @default(0) @db.Decimal(15, 2)
+
+  preTaxDeductions Decimal @default(0) @db.Decimal(15, 2)
+  taxableIncome Decimal @default(0) @db.Decimal(15, 2)
+
+  totalTax Decimal @default(0) @db.Decimal(15, 2)
+  postTaxDeductions Decimal @default(0) @db.Decimal(15, 2)
+
+  netPay Decimal @default(0) @db.Decimal(15, 2)
+  snapshot Json? // Store a snapshot of the calculation details for auditing purposes
+
+  calculatedAt DateTime @default(now())
+  items PayrollCalculationItem[]
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
 }
 
+model PayrollCalculationItem {
+  id String @id @default(uuid(7))
+  
+  calculationId String
+  Calculation PayrollCalculation @relation(fields: [calculationId], references: [id], onDelete: Cascade)
+
+  name String
+  type PayrollItemType
+  amount Decimal @db.Decimal(15, 2)
+  taxable Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([calculationId])
+  @@index([type])
+}
+
+
+
 model Payslip {
-  id             String     @id @default(cuid())
+  id             String     @id @default(uuid(7))
   employeeId     String
   payrollRunId   String
-  grossPay       Decimal    @db.Decimal(15, 2)
-  netPay         Decimal    @db.Decimal(15, 2)
+  employeeNumberSnapshot String
+  employeeNameSnapshot String
+  departmentSnapshot String?
+  positionSnapshot String?
   totalAllowance Decimal    @db.Decimal(15, 2)
   totalDeduction Decimal    @db.Decimal(15, 2)
+  grossPay       Decimal    @db.Decimal(15, 2)
+  netPay         Decimal    @db.Decimal(15, 2)
   totalTax       Decimal    @db.Decimal(15, 2)
   currency       String     @default("VND")
   paidAt         DateTime?
@@ -454,14 +555,20 @@ model Payslip {
   lineItems      PayslipLineItem[]
 
   @@unique([employeeId, payrollRunId])
+  @@index([payrollRunId])
 }
 
 model PayslipLineItem {
-  id        String  @id @default(cuid())
+  id        String  @id @default(uuid(7))
   payslipId String
   name      String
   type      String  // EARNING, DEDUCTION, TAX
   amount    Decimal @db.Decimal(15, 2)
+  taxable Boolean @default(false)
 
   payslip   Payslip @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([payslipId])
 }
