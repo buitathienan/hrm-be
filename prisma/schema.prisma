@@ -13,10 +13,22 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AllowanceCalculationType {
+  FIXED
+  PERCENTAGE
+}
+
+enum DeductionCalculationType {
+  FIXED
+  PERCENTAGE
+  PER_DAY
+  PER_HOUR
+}
+
+
 enum Gender {
   MALE
   FEMALE
-  PREFER_NOT_TO_SAY
 }
 
 enum EmploymentType {
@@ -38,42 +50,11 @@ enum EmploymentStatus {
   SUSPENDED
 }
 
-enum LeaveCategory {
-  ANNUAL
-  SICK
-  UNPAID
-  PUBLIC_HOLIDAY
-  OTHER
-}
-
 enum LeaveStatus {
   PENDING
   APPROVED
   REJECTED
   CANCELLED
-  IN_PROGRESS
-  COMPLETED
-}
-
-enum AssetStatus {
-  AVAILABLE
-  ASSIGNED
-  IN_REPAIR
-  RETIRED
-  LOST
-}
-
-enum PayType {
-  SALARY
-  HOURLY
-}
-
-enum PayFrequency {
-  WEEKLY
-  BI_WEEKLY
-  SEMI_MONTHLY
-  MONTHLY
-  ANNUALLY
 }
 
 enum AttendanceStatus {
@@ -83,7 +64,12 @@ enum AttendanceStatus {
   HALF_DAY
 }
 
-enum PayrollRunStatus {
+enum PayType {
+  SALARY
+  HOURLY
+}
+
+enum PayrollPeriodStatus {
   DRAFT
   CALCULATING
   CALCULATED
@@ -92,330 +78,179 @@ enum PayrollRunStatus {
   CANCELLED
 }
 
-enum AllowanceCalculationType {
-  FIXED
-  PERCENTAGE
-}
-
-enum DeductionCalculationType {
-  FIXED
-  PERCENTAGE
-  PER_DAY
-  PER_HOUR
-}
-
-enum PayrollItemType {
-  EARNING
+enum PayslipItemType {
+  ALLOWANCE
   DEDUCTION
   TAX
+  BONUS
+  OVERTIME
 }
 
 model Department {
-  id          String   @id @default(uuid(7))
-  name        String
-  code        String?  @unique
+  id Int @id @default(autoincrement())
+  name String
+  code String @unique
   description String?
-  parentId    String?
-  headId      String?  @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  children  Department[] @relation("DepartmentHierarchy")
-  head      Employee?    @relation("DepartmentHead", fields: [headId], references: [id])
-  positions Position[]
   employees Employee[]
-}
 
-model Position {
-  id           String      @id @default(uuid(7))
-  title        String
-  code         String?
-  departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id])
-  minSalary    Decimal?    @db.Decimal(15, 2)
-  maxSalary    Decimal?    @db.Decimal(15, 2)
-  isActive     Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  employees Employee[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Employee {
-  id                   String                 @id @default(uuid(7))
-  employeeNumber       String                 @unique
-  firstName            String
-  lastName             String
-  email                String                 @unique
-  workEmail            String?                @unique
-  phone                String?
-  dateOfBirth          DateTime?
-  gender               Gender?
-  profilePhotoUrl      String?
-  hireDate             DateTime
+  id Int @id @default(autoincrement())
+  firstName String
+  lastName String
+  gender Gender?
+  email String @unique
+  phone String?
+  avatarUrl String?
+  hireDate DateTime
   probationEnd         DateTime?
   confirmationDate     DateTime?
   terminationDate      DateTime?
+  departmentId Int
+  department Department @relation(fields: [departmentId], references: [id])
+  managerId Int?
+  manager Employee? @relation("EmployeeManager", fields: [managerId], references: [id])
+  subordinates Employee[] @relation("EmployeeManager")
   employmentType       EmploymentType         @default(FULL_TIME)
   employmentStatus     EmploymentStatus       @default(ACTIVE)
-  positionId           String?
-  position             Position?              @relation(fields: [positionId], references: [id])
-  departmentId         String?
-  department           Department?            @relation(fields: [departmentId], references: [id])
-  managerId            String?
-  manager              Employee?              @relation("ManagerSubordinates", fields: [managerId], references: [id])
-  subordinates         Employee[]             @relation("ManagerSubordinates")
-  headOfDepartment     Department?            @relation("DepartmentHead")
-  address              String?
-  bankAccounts         BankAccount[]
-  userId               String?                @unique
-  user                 User?                  @relation(fields: [userId], references: [id])
-  leaveBalances        LeaveBalance[]
-  leaveRequests        LeaveRequest[]         @relation("EmployeeLeaveRequests")
-  leaveApprovals       LeaveRequest[]         @relation("LeaveApprover")
-  attendance           Attendance[]
-  scheduleId           String?
-  schedules            ShiftSchedule[]
-  assets               AssetAssignment[]
-  salaryHistory        SalaryHistory[]
-  employeeCompensation EmployeeCompensation[]
-  payrollCalculations  PayrollCalculation[]
-  payslips             Payslip[]
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-}
+  leaveRequests LeaveRequest[]
+  attendances Attendance[]
+  payslips Payslip[]
+  user User?
+  compensation EmployeeCompensation?
+  salaryHistories SalaryHistory[]
 
-model BankAccount {
-  id            String   @id @default(uuid(7))
-  employeeId    String
-  employee      Employee @relation(fields: [employeeId], references: [id])
-  accountName   String
-  accountNumber String
-  currency      String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model User {
-  id           String   @id @default(uuid(7))
-  email        String   @unique
-  passwordHash String
+  id Int @id @default(autoincrement())
+  email String @unique
+  password String
+  employeeId Int @unique
+  employee Employee @relation(fields: [employeeId], references: [id])
   refreshToken String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive Boolean @default(true)
+  roleId Int
+  role Role @relation(fields: [roleId], references: [id])
+  payrollPeriodsProcessed PayrollPeriod[]
 
-  employee Employee?
-  roleId   String
-  role     Role      @relation(fields: [roleId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Role {
-  id          String   @id @default(uuid(7))
-  name        String   @unique
+  id Int @id @default(autoincrement())
+  name String @unique
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  users           User[]
+  users User[]
   rolePermissions RolePermission[]
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Permission {
-  id          String  @id @default(uuid(7))
-  resource    String
-  action      String
+  id Int @id @default(autoincrement())
+  resource String
+  action String
   description String?
-
   rolePermissions RolePermission[]
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([resource, action])
 }
 
 model RolePermission {
-  roleId       String
-  permissionId String
+  roleId Int
+  permissionId Int
 
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
 
   @@id([roleId, permissionId])
 }
 
 model LeaveType {
-  id               String         @id @default(uuid(7))
-  name             String
-  category         LeaveCategory
-  isPaid           Boolean        @default(true)
-  isActive         Boolean        @default(true)
-  requiresApproval Boolean        @default(true)
-  leaveBalance     LeaveBalance[]
-  leaveRequests    LeaveRequest[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-}
+  id Int @id @default(autoincrement())
+  name String
+  code String @unique
+  description String?
+  isActive Boolean @default(true)
+  leaveRequests LeaveRequest[]
 
-model LeaveBalance {
-  id          String    @id @default(uuid(7))
-  employeeId  String
-  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  leaveTypeId String
-  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id])
-  year        Int
-  entitled    Decimal   @db.Decimal(5, 2)
-  used        Decimal   @default(0) @db.Decimal(5, 2)
-  pending     Decimal   @default(0) @db.Decimal(5, 2)
-  carriedOver Decimal   @default(0) @db.Decimal(5, 2)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@unique([employeeId, leaveTypeId, year])
-}
-
-model LeaveRequest {
-  id              String      @id @default(uuid(7))
-  employeeId      String
-  leaveTypeId     String
-  startDate       DateTime
-  endDate         DateTime
-  totalDays       Decimal     @db.Decimal(5, 2)
-  reason          String?
-  status          LeaveStatus @default(PENDING)
-  approverId      String?
-  approvedAt      DateTime?
-  rejectedAt      DateTime?
-  rejectionReason String?
-  attachmentUrl   String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-
-  employee  Employee  @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id])
-  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
-  approver  Employee? @relation("LeaveApprover", fields: [approverId], references: [id])
-}
-
-model PublicHoliday {
-  id        String   @id @default(uuid(7))
-  name      String
-  date      DateTime
-  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Attendance {
-  id            String           @id @default(uuid(7))
-  employeeId    String
-  date          DateTime         @db.Date
-  checkIn       DateTime?
-  checkOut      DateTime?
-  hoursWorked   Decimal?         @db.Decimal(5, 2)
-  overtimeHours Decimal?         @db.Decimal(5, 2)
-  status        AttendanceStatus @default(PRESENT)
-  notes         String?
-  source        String? // BIOMETRIC, MANUAL, MOBILE, WEB
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
+model LeaveRequest {
+  id Int @id @default(autoincrement())
+  employeeId Int
   employee Employee @relation(fields: [employeeId], references: [id])
+  leaveTypeId Int
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+  startDate DateTime
+  endDate DateTime
+  reason String?
+  status LeaveStatus @default(PENDING)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Attendance {
+  id Int @id @default(autoincrement())
+  employeeId Int
+  employee Employee @relation(fields: [employeeId], references: [id])
+  date DateTime @db.Date
+  checkIn DateTime?
+  checkOut DateTime?
+  status AttendanceStatus? @default(PRESENT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([employeeId, date])
 }
 
-model Shift {
-  id        String   @id @default(uuid(7))
-  name      String
-  startTime String // HH:mm format
-  endTime   String
-  breakMins Int      @default(60)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  schedules ShiftSchedule[]
-}
-
-model ShiftSchedule {
-  id         String    @id @default(uuid(7))
-  shiftId    String
-  startDate  DateTime
-  endDate    DateTime?
-  employeeId String
-  createdAt  DateTime  @default(now())
-
-  shift    Shift    @relation(fields: [shiftId], references: [id])
-  employee Employee @relation(fields: [employeeId], references: [id])
-}
-
-model Asset {
-  id           String      @id @default(uuid(7))
-  name         String
-  category     String
-  serialNumber String?     @unique
-  brand        String?
-  model        String?
-  purchaseDate DateTime?
-  purchaseCost Decimal?    @db.Decimal(15, 2)
-  status       AssetStatus @default(AVAILABLE)
-  notes        String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  assignments AssetAssignment[]
-}
-
-model AssetAssignment {
-  id         String    @id @default(uuid(7))
-  assetId    String
-  employeeId String
-  assignedAt DateTime  @default(now())
-  returnedAt DateTime?
-  condition  String?
-  notes      String?
-
-  asset    Asset    @relation(fields: [assetId], references: [id])
-  employee Employee @relation(fields: [employeeId], references: [id])
-}
-
 model EmployeeCompensation {
-  id            String                  @id @default(uuid(7))
-  employeeId    String
-  effectiveFrom DateTime
-  effectiveTo   DateTime?
-  currency      String                  @default("VND")
-  baseSalary    Decimal                 @db.Decimal(15, 2)
-  payType       PayType                 @default(SALARY)
-  payFrequency  PayFrequency            @default(MONTHLY)
+  id Int @id @default(autoincrement())
+  employeeId Int @unique
+  employee Employee @relation(fields: [employeeId], references: [id])
+  currency String @default("VND")
+  baseSalary Decimal @db.Decimal(15,2)
   deductions    CompensationDeduction[]
   allowances    CompensationAllowance[]
 
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([employeeId, effectiveFrom])
-  @@index([employeeId, effectiveTo])
 }
 
 model SalaryHistory {
-  id           String   @id @default(uuid(7))
-  employeeId   String
+  id           Int   @id @default(autoincrement())
+  employeeId   Int
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   oldSalary    Decimal  @db.Decimal(15, 2)
   newSalary    Decimal  @db.Decimal(15, 2)
   currency     String   @default("VND")
   effectiveAt  DateTime
   reason       String?
-  approvedById String?
-  createdAt    DateTime @default(now())
+  
 
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
 }
 
 model CompensationAllowance {
-  id                     String                   @id @default(uuid(7))
-  employeeCompensationId String
+  id                     Int   @id @default(autoincrement())
+  employeeCompensationId Int
   employeeCompensation   EmployeeCompensation     @relation(fields: [employeeCompensationId], references: [id], onDelete: Cascade)
   name                   String
   amount                 Decimal?                 @db.Decimal(15, 2)
@@ -429,140 +264,77 @@ model CompensationAllowance {
   @@index([employeeCompensationId])
 }
 
-model CompensationDeduction {
-  id                     String                   @id @default(uuid(7))
-  employeeCompensationId String
-  name                   String
-  amount                 Decimal?                 @db.Decimal(15, 2)
-  calculationType        DeductionCalculationType
-  rate                   Decimal?                 @db.Decimal(8, 4)
-  isRecurring            Boolean                  @default(true)
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+  model CompensationDeduction {
+    id Int @id @default(autoincrement())
+    employeeCompensationId Int
+    employeeCompensation EmployeeCompensation @relation(fields: [employeeCompensationId], references: [id], onDelete: Cascade)
+    name String
+    amount Decimal? @db.Decimal(15, 2)
+    rate Decimal? @db.Decimal(8, 4)
+    calculationType DeductionCalculationType
+    
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  employeeCompensation EmployeeCompensation @relation(fields: [employeeCompensationId], references: [id], onDelete: Cascade)
-}
+    @@index([employeeCompensationId])
+  }
 
-model PayrollPeriod {
-  id          String       @id @default(uuid(7))
-  periodStart DateTime
-  periodEnd   DateTime
-  payDate     DateTime
-  payrollRun  PayrollRun[]
-}
+  model PayrollPeriod {
+    id Int @id @default(autoincrement())
+    startDate DateTime @db.Date
+    endDate DateTime @db.Date
+    status PayrollPeriodStatus @default(DRAFT)
+    totalGross Decimal @db.Decimal(15,2)
+    totalNet Decimal @db.Decimal(15, 2)
+    totalTax Decimal @db.Decimal(15, 2)
+    notes String?
+    processedAt DateTime?
+    processById Int?
+    processedBy User? @relation(fields: [processById], references: [id])
+    payslips Payslip[]
 
-model PayrollRun {
-  id                 String           @id @default(uuid(7))
-  payrollPeriodId    String
-  payrollPeriod      PayrollPeriod    @relation(fields: [payrollPeriodId], references: [id])
-  status             PayrollRunStatus @default(DRAFT)
-  totalGross         Decimal          @db.Decimal(15, 2)
-  totalNet           Decimal          @db.Decimal(15, 2)
-  totalTax           Decimal          @db.Decimal(15, 2)
-  notes              String?
-  processedAt        DateTime?
-  processedById      String?
-  calculationVersion String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  calculations PayrollCalculation[]
-  payslips     Payslip[]
+    @@unique([startDate, endDate])
+    @@index([status])
+  }
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  model Payslip {
+    id Int @id @default(autoincrement())
+    employeeId Int
+    employee Employee @relation(fields: [employeeId], references: [id])
+    payrollPeriodId Int
+    payrollPeriod PayrollPeriod @relation(fields: [payrollPeriodId], references: [id])
+    employeeIdSnapshot Int
+    employeeNameSnapshot String
+    departmentSnapshot String?
+    totalAllowance Decimal @db.Decimal(15, 2)
+    totalDeduction Decimal @db.Decimal(15, 2)
+    totalGross Decimal @db.Decimal(15, 2)
+    totalNet Decimal @db.Decimal(15, 2)
+    totalTax Decimal @db.Decimal(15, 2)
+    currency String @default("VND")
+    paidAt DateTime?
+    payslipItems PayslipItem[]
 
-  @@index([payrollPeriodId])
-  @@index([status])
-}
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-/**
- * This model can be used to store the results of payroll calculations,
- * such as gross pay, net pay, deductions, and taxes for each employee in a payroll run.
- * It can also include references to the payroll run and employee models for easy access to related data.
- */
-model PayrollCalculation {
-  id String @id @default(uuid(7))
+    @@unique([employeeId, payrollPeriodId])
+    @@index([payrollPeriodId])
+  }
 
-  payrollRunId String
-  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  model PayslipItem {
+    id Int @id @default(autoincrement())
+    payslipId Int
+    payslip Payslip @relation(fields: [payslipId], references: [id])
+    name String
+    amount Decimal @db.Decimal(15, 2)
+    type PayslipItemType
 
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  baseSalary Decimal @default(0) @db.Decimal(15, 2)
-
-  totalEarnings Decimal @default(0) @db.Decimal(15, 2)
-  grossPay      Decimal @default(0) @db.Decimal(15, 2)
-
-  preTaxDeductions Decimal @default(0) @db.Decimal(15, 2)
-  taxableIncome    Decimal @default(0) @db.Decimal(15, 2)
-
-  totalTax          Decimal @default(0) @db.Decimal(15, 2)
-  postTaxDeductions Decimal @default(0) @db.Decimal(15, 2)
-
-  netPay   Decimal @default(0) @db.Decimal(15, 2)
-  snapshot Json? // Store a snapshot of the calculation details for auditing purposes
-
-  calculatedAt DateTime                 @default(now())
-  items        PayrollCalculationItem[]
-
-  @@unique([payrollRunId, employeeId])
-  @@index([employeeId])
-}
-
-model PayrollCalculationItem {
-  id String @id @default(uuid(7))
-
-  calculationId String
-  Calculation   PayrollCalculation @relation(fields: [calculationId], references: [id], onDelete: Cascade)
-
-  name    String
-  type    PayrollItemType
-  amount  Decimal         @db.Decimal(15, 2)
-  taxable Boolean         @default(false)
-
-  createdAt DateTime @default(now())
-
-  @@index([calculationId])
-  @@index([type])
-}
-
-model Payslip {
-  id                     String    @id @default(uuid(7))
-  employeeId             String
-  payrollRunId           String
-  employeeNumberSnapshot String
-  employeeNameSnapshot   String
-  departmentSnapshot     String?
-  positionSnapshot       String?
-  totalAllowance         Decimal   @db.Decimal(15, 2)
-  totalDeduction         Decimal   @db.Decimal(15, 2)
-  grossPay               Decimal   @db.Decimal(15, 2)
-  netPay                 Decimal   @db.Decimal(15, 2)
-  totalTax               Decimal   @db.Decimal(15, 2)
-  currency               String    @default("VND")
-  paidAt                 DateTime?
-  fileUrl                String?
-  createdAt              DateTime  @default(now())
-
-  employee   Employee          @relation(fields: [employeeId], references: [id])
-  payrollRun PayrollRun        @relation(fields: [payrollRunId], references: [id])
-  lineItems  PayslipLineItem[]
-
-  @@unique([employeeId, payrollRunId])
-  @@index([payrollRunId])
-}
-
-model PayslipLineItem {
-  id        String  @id @default(uuid(7))
-  payslipId String
-  name      String
-  type      String // EARNING, DEDUCTION, TAX
-  amount    Decimal @db.Decimal(15, 2)
-  taxable   Boolean @default(false)
-
-  payslip Payslip @relation(fields: [payslipId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@index([payslipId])
-}
+    @@index([payslipId])
+  }
