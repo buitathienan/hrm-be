@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsPhoneNumber,
   IsString,
@@ -18,7 +19,7 @@ import {
 export class CreateEmployeeDto {
   @IsString()
   @IsNotEmpty()
-  employeeNumber: string;
+  code: string;
 
   @IsString()
   @IsNotEmpty()
@@ -32,18 +33,9 @@ export class CreateEmployeeDto {
   @IsNotEmpty()
   email: string;
 
-  @IsEmail()
-  @IsOptional()
-  workEmail?: string;
-
   @IsPhoneNumber()
   @IsOptional()
   phone?: string;
-
-  @Type(() => Date)
-  @IsDate()
-  @IsOptional()
-  dateOfBirth?: Date;
 
   @IsEnum(Gender)
   @IsOptional()
@@ -51,7 +43,7 @@ export class CreateEmployeeDto {
 
   @IsString()
   @IsOptional()
-  profilePhotoUrl?: string;
+  avatarUrl?: string;
 
   @Type(() => Date)
   @IsDate()
@@ -68,6 +60,11 @@ export class CreateEmployeeDto {
   @IsOptional()
   confirmationDate?: Date;
 
+  @Type(() => Date)
+  @IsDate()
+  @IsOptional()
+  terminationDate?: Date;
+
   @IsEnum(EmploymentType)
   @IsOptional()
   employmentType?: EmploymentType;
@@ -76,32 +73,14 @@ export class CreateEmployeeDto {
   @IsOptional()
   employmentStatus?: EmploymentStatus;
 
-  @IsUUID()
-  @IsOptional()
-  positionId?: string;
+  @IsNumber()
+  departmentId: number;
 
-  @IsUUID()
+  @IsNumber()
   @IsOptional()
-  departmentId?: string;
+  managerId?: number;
 
-  @IsUUID()
+  @IsNumber()
   @IsOptional()
-  managerId?: string;
-
-  @IsString()
-  @IsOptional()
-  address?: string;
-
-  @IsUUID()
-  @IsOptional()
-  userId?: string;
-
-  @IsUUID()
-  @IsOptional()
-  scheduleId?: string;
-
-  @Type(() => Date)
-  @IsDate()
-  @IsOptional()
-  terminationDate?: Date;
+  userId?: number;
 }

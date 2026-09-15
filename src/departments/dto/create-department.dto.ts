@@ -8,24 +8,14 @@ export class CreateDepartmentDto {
   name: string;
 
   @ApiProperty({ required: false })
-  @IsOptional()
   @IsString()
-  @MaxLength(6)
-  code?: string;
+  @MaxLength(50)
+  @IsNotEmpty()
+  code: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  @MaxLength(200)
+  @MaxLength(255)
   description?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  parentId?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  headId?: string;
 }

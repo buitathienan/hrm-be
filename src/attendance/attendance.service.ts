@@ -13,7 +13,7 @@ import { CheckOutDto } from './dto/check-out.dto';
 export class AttendanceService {
   constructor(private prisma: PrismaService) {}
 
-  async checkIn(employeeId: string, data: CheckInDto) {
+  async checkIn(employeeId: number, data: CheckInDto) {
     if (!data.latitude || !data.longitude) {
       throw new BadRequestException(
         'Location coordinates are required to clock in.',
@@ -26,7 +26,7 @@ export class AttendanceService {
 
     const distance = calculateDistance(data.latitude, data.longitude, 1, 1);
     if (distance > 500) {
-      // 509 mean 500m
+      // 500 mean 500m
       throw new ForbiddenException(
         'You are not within the allowed office radius.',
       );
@@ -41,27 +41,27 @@ export class AttendanceService {
     if (checkIn)
       throw new ConflictException('You have already clocked in today.');
 
-    const currentShift = await this.prisma.shiftSchedule.findFirst({
-      where: {
-        startDate: { lte: today },
-        OR: [{ endDate: { gte: today } }, { endDate: null }],
-        employeeId,
-      },
-      include: {
-        shift: true,
-      },
-    });
+    // const currentShift = await this.prisma.shiftSchedule.findFirst({
+    //   where: {
+    //     startDate: { lte: today },
+    //     OR: [{ endDate: { gte: today } }, { endDate: null }],
+    //     employeeId,
+    //   },
+    //   include: {
+    //     shift: true,
+    //   },
+    // });
 
-    if (!currentShift)
-      throw new BadRequestException(
-        'No shift found for today. Cannot clock in',
-      );
+    // if (!currentShift)
+    //   throw new BadRequestException(
+    //     'No shift found for today. Cannot clock in',
+    //   );
 
-    const startTime = currentShift.shift.startTime;
-    const [hours, minutes] = startTime.split(':').map(Number);
+    // const startTime = currentShift.shift.startTime;
+    // const [hours, minutes] = startTime.split(':').map(Number);
 
     const expectedTime = new Date(now);
-    expectedTime.setHours(hours, minutes, 0, 0);
+    expectedTime.setHours(8, 0, 0, 0); // Start time is 8:00 AM
 
     const gracePeriodEnd = new Date(expectedTime);
     gracePeriodEnd.setMinutes(gracePeriodEnd.getMinutes() + 10);
@@ -78,13 +78,11 @@ export class AttendanceService {
         date: today,
         checkIn: now,
         status,
-        source: data.source,
-        notes: data.notes,
       },
     });
   }
 
-  async checkOut(employeeId: string, data: CheckOutDto) {
+  async checkOut(employeeId: number, data: CheckOutDto) {
     if (!data.latitude || !data.longitude) {
       throw new BadRequestException(
         'Location coordinates are required to clock out.',
@@ -115,15 +113,12 @@ export class AttendanceService {
     else if (checkIn.checkOut)
       throw new BadRequestException('You have already clocked out today.');
 
-    const rawHours =
-      (now.getTime() - checkIn.checkIn?.getTime()) / (1000 * 60 * 60);
     return this.prisma.attendance.update({
       where: {
         id: checkIn.id,
       },
       data: {
         checkOut: now,
-        hoursWorked: rawHours,
       },
     });
   }
@@ -132,7 +127,7 @@ export class AttendanceService {
     return this.prisma.attendance.findMany();
   }
 
-  async findByEmployeeId(id: string) {
+  async findByEmployeeId(id: number) {
     return this.prisma.attendance.findFirst({ where: { employeeId: id } });
   }
 }

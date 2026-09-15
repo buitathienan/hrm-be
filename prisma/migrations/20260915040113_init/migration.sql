@@ -1,8 +1,5 @@
 -- CreateEnum
-CREATE TYPE "AllowanceCalculationType" AS ENUM ('FIXED', 'PERCENTAGE');
-
--- CreateEnum
-CREATE TYPE "DeductionCalculationType" AS ENUM ('FIXED', 'PERCENTAGE', 'PER_DAY', 'PER_HOUR');
+CREATE TYPE "SalaryComponentCalculationType" AS ENUM ('FIXED', 'PERCENTAGE', 'FORMULA', 'BASE_SALARY');
 
 -- CreateEnum
 CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE');
@@ -28,6 +25,9 @@ CREATE TYPE "PayrollPeriodStatus" AS ENUM ('DRAFT', 'CALCULATING', 'CALCULATED',
 -- CreateEnum
 CREATE TYPE "PayslipItemType" AS ENUM ('ALLOWANCE', 'DEDUCTION', 'TAX', 'BONUS', 'OVERTIME');
 
+-- CreateEnum
+CREATE TYPE "SalaryComponentType" AS ENUM ('ALLOWANCE', 'DEDUCTION');
+
 -- CreateTable
 CREATE TABLE "Department" (
     "id" SERIAL NOT NULL,
@@ -43,6 +43,7 @@ CREATE TABLE "Department" (
 -- CreateTable
 CREATE TABLE "Employee" (
     "id" SERIAL NOT NULL,
+    "code" TEXT NOT NULL,
     "firstName" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "gender" "Gender",
@@ -152,70 +153,11 @@ CREATE TABLE "Attendance" (
 );
 
 -- CreateTable
-CREATE TABLE "EmployeeCompensation" (
-    "id" SERIAL NOT NULL,
-    "employeeId" INTEGER NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'VND',
-    "baseSalary" DECIMAL(15,2) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "EmployeeCompensation_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "SalaryHistory" (
-    "id" SERIAL NOT NULL,
-    "employeeId" INTEGER NOT NULL,
-    "oldSalary" DECIMAL(15,2) NOT NULL,
-    "newSalary" DECIMAL(15,2) NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'VND',
-    "effectiveAt" TIMESTAMP(3) NOT NULL,
-    "reason" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "SalaryHistory_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CompensationAllowance" (
-    "id" SERIAL NOT NULL,
-    "employeeCompensationId" INTEGER NOT NULL,
-    "name" TEXT NOT NULL,
-    "amount" DECIMAL(15,2),
-    "rate" DECIMAL(8,4),
-    "calculationType" "AllowanceCalculationType" NOT NULL,
-    "isTaxable" BOOLEAN NOT NULL DEFAULT true,
-    "isRecurring" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "CompensationAllowance_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CompensationDeduction" (
-    "id" SERIAL NOT NULL,
-    "employeeCompensationId" INTEGER NOT NULL,
-    "name" TEXT NOT NULL,
-    "amount" DECIMAL(15,2),
-    "rate" DECIMAL(8,4),
-    "calculationType" "DeductionCalculationType" NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "CompensationDeduction_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "PayrollPeriod" (
     "id" SERIAL NOT NULL,
     "startDate" DATE NOT NULL,
     "endDate" DATE NOT NULL,
     "status" "PayrollPeriodStatus" NOT NULL DEFAULT 'DRAFT',
-    "totalGross" DECIMAL(15,2) NOT NULL,
-    "totalNet" DECIMAL(15,2) NOT NULL,
-    "totalTax" DECIMAL(15,2) NOT NULL,
     "notes" TEXT,
     "processedAt" TIMESTAMP(3),
     "processById" INTEGER,
@@ -259,8 +201,65 @@ CREATE TABLE "PayslipItem" (
     CONSTRAINT "PayslipItem_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "SalaryComponent" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "description" TEXT,
+    "type" "SalaryComponentType" NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SalaryComponent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SalaryStructure" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SalaryStructure_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SalaryStructureComponent" (
+    "id" SERIAL NOT NULL,
+    "salaryStructureId" INTEGER NOT NULL,
+    "salaryComponentId" INTEGER NOT NULL,
+    "sortOrder" INTEGER NOT NULL,
+    "value" DECIMAL(15,2),
+    "calculationType" "SalaryComponentCalculationType" NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SalaryStructureComponent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SalaryStructureAssignment" (
+    "id" SERIAL NOT NULL,
+    "employeeId" INTEGER NOT NULL,
+    "salaryStructureId" INTEGER NOT NULL,
+    "baseSalary" DECIMAL(15,2) NOT NULL,
+    "fromDate" DATE NOT NULL,
+    "toDate" DATE,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SalaryStructureAssignment_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Department_code_key" ON "Department"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Employee_code_key" ON "Employee"("code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Employee_email_key" ON "Employee"("email");
@@ -284,15 +283,6 @@ CREATE UNIQUE INDEX "LeaveType_code_key" ON "LeaveType"("code");
 CREATE UNIQUE INDEX "Attendance_employeeId_date_key" ON "Attendance"("employeeId", "date");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EmployeeCompensation_employeeId_key" ON "EmployeeCompensation"("employeeId");
-
--- CreateIndex
-CREATE INDEX "CompensationAllowance_employeeCompensationId_idx" ON "CompensationAllowance"("employeeCompensationId");
-
--- CreateIndex
-CREATE INDEX "CompensationDeduction_employeeCompensationId_idx" ON "CompensationDeduction"("employeeCompensationId");
-
--- CreateIndex
 CREATE INDEX "PayrollPeriod_status_idx" ON "PayrollPeriod"("status");
 
 -- CreateIndex
@@ -306,6 +296,24 @@ CREATE UNIQUE INDEX "Payslip_employeeId_payrollPeriodId_key" ON "Payslip"("emplo
 
 -- CreateIndex
 CREATE INDEX "PayslipItem_payslipId_idx" ON "PayslipItem"("payslipId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SalaryComponent_code_key" ON "SalaryComponent"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SalaryStructure_code_key" ON "SalaryStructure"("code");
+
+-- CreateIndex
+CREATE INDEX "SalaryStructureComponent_salaryStructureId_idx" ON "SalaryStructureComponent"("salaryStructureId");
+
+-- CreateIndex
+CREATE INDEX "SalaryStructureComponent_salaryComponentId_idx" ON "SalaryStructureComponent"("salaryComponentId");
+
+-- CreateIndex
+CREATE INDEX "SalaryStructureAssignment_employeeId_fromDate_toDate_idx" ON "SalaryStructureAssignment"("employeeId", "fromDate", "toDate");
+
+-- CreateIndex
+CREATE INDEX "SalaryStructureAssignment_salaryStructureId_idx" ON "SalaryStructureAssignment"("salaryStructureId");
 
 -- AddForeignKey
 ALTER TABLE "Employee" ADD CONSTRAINT "Employee_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -335,18 +343,6 @@ ALTER TABLE "LeaveRequest" ADD CONSTRAINT "LeaveRequest_leaveTypeId_fkey" FOREIG
 ALTER TABLE "Attendance" ADD CONSTRAINT "Attendance_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EmployeeCompensation" ADD CONSTRAINT "EmployeeCompensation_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "SalaryHistory" ADD CONSTRAINT "SalaryHistory_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CompensationAllowance" ADD CONSTRAINT "CompensationAllowance_employeeCompensationId_fkey" FOREIGN KEY ("employeeCompensationId") REFERENCES "EmployeeCompensation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CompensationDeduction" ADD CONSTRAINT "CompensationDeduction_employeeCompensationId_fkey" FOREIGN KEY ("employeeCompensationId") REFERENCES "EmployeeCompensation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "PayrollPeriod" ADD CONSTRAINT "PayrollPeriod_processById_fkey" FOREIGN KEY ("processById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -357,3 +353,15 @@ ALTER TABLE "Payslip" ADD CONSTRAINT "Payslip_payrollPeriodId_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "PayslipItem" ADD CONSTRAINT "PayslipItem_payslipId_fkey" FOREIGN KEY ("payslipId") REFERENCES "Payslip"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SalaryStructureComponent" ADD CONSTRAINT "SalaryStructureComponent_salaryStructureId_fkey" FOREIGN KEY ("salaryStructureId") REFERENCES "SalaryStructure"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SalaryStructureComponent" ADD CONSTRAINT "SalaryStructureComponent_salaryComponentId_fkey" FOREIGN KEY ("salaryComponentId") REFERENCES "SalaryComponent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SalaryStructureAssignment" ADD CONSTRAINT "SalaryStructureAssignment_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SalaryStructureAssignment" ADD CONSTRAINT "SalaryStructureAssignment_salaryStructureId_fkey" FOREIGN KEY ("salaryStructureId") REFERENCES "SalaryStructure"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

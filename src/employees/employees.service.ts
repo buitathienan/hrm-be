@@ -55,7 +55,7 @@ export class EmployeesService {
     return result;
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const employee = await this.prisma.employee.findUnique({
       where: { id },
     });
@@ -63,14 +63,14 @@ export class EmployeesService {
     return employee;
   }
 
-  async update(id: string, data: UpdateEmployeeDto) {
+  async update(id: number, data: UpdateEmployeeDto) {
     return this.prisma.employee.update({
       data: data,
       where: { id },
     });
   }
 
-  async delete(id: string) {
+  async delete(id: number) {
     return this.prisma.employee.delete({ where: { id } });
   }
 }

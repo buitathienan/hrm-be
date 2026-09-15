@@ -16,7 +16,7 @@ export class AuthService {
     const user = await this.userService.findByEmail(data.email);
     if (!user) throw new UnauthorizedException();
 
-    const isValid = await bcrypt.compare(data.password, user.passwordHash);
+    const isValid = await bcrypt.compare(data.password, user.password);
     if (!isValid) throw new UnauthorizedException();
 
     const userPermissions = user.role.rolePermissions.map(

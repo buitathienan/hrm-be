@@ -31,20 +31,20 @@ export class EmployeesController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
+  async getOne(@Param('id') id: number) {
     return this.employeeService.findOne(id);
   }
 
   @Patch(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() updatEemployeeDto: UpdateEmployeeDto,
   ) {
     return this.employeeService.update(id, updatEemployeeDto);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: number) {
     return this.employeeService.delete(id);
   }
 }

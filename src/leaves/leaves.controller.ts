@@ -17,7 +17,7 @@ export class LeavesController {
 
   @Patch(':id/status')
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() updateLeaveStatus: UpdateLeaveStatus,
   ) {
     return this.leavesService.updateStatus(id, updateLeaveStatus.status);

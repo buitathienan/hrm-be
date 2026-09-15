@@ -14,17 +14,17 @@ export class LeavesService {
 
   async createLeaveRequest(data: CreateLeaveRequestDto) {
     const result = await this.prisma.$transaction(async (tx) => {
-      const leaveBalance = await tx.leaveBalance.findFirst({
-        where: {
-          employeeId: data.employeeId,
-          leaveTypeId: data.leaveTypeId,
-          year: new Date().getFullYear(),
-        },
-      });
-      if (leaveBalance && leaveBalance.entitled.toNumber() <= 0)
-        throw new BadRequestException('You have used all days left in balance');
-      else if (!leaveBalance)
-        throw new BadRequestException('Cannot find leave balance');
+      // const leaveBalance = await tx.leaveBalance.findFirst({
+      //   where: {
+      //     employeeId: data.employeeId,
+      //     leaveTypeId: data.leaveTypeId,
+      //     year: new Date().getFullYear(),
+      //   },
+      // });
+      // if (leaveBalance && leaveBalance.entitled.toNumber() <= 0)
+      //   throw new BadRequestException('You have used all days left in balance');
+      // else if (!leaveBalance)
+      //   throw new BadRequestException('Cannot find leave balance');
 
       if (
         compareAsc(data.startDate, data.endDate) === 1 ||
@@ -47,27 +47,26 @@ export class LeavesService {
       const totalRequestDays =
         differenceInDays(data.endDate, data.startDate) + 1;
 
-      if (leaveBalance.entitled.minus(totalRequestDays).toNumber() < 0) {
-        throw new BadRequestException(
-          'Total leave days should not be bigger than total entitled days',
-        );
-      }
-      await tx.leaveBalance.update({
-        where: { id: leaveBalance.id },
-        data: {
-          pending: { increment: totalRequestDays },
-          entitled: {
-            decrement: totalRequestDays,
-          },
-        },
-      });
+      // if (leaveBalance.entitled.minus(totalRequestDays).toNumber() < 0) {
+      //   throw new BadRequestException(
+      //     'Total leave days should not be bigger than total entitled days',
+      //   );
+      // }
+      // await tx.leaveBalance.update({
+      //   where: { id: leaveBalance.id },
+      //   data: {
+      //     pending: { increment: totalRequestDays },
+      //     entitled: {
+      //       decrement: totalRequestDays,
+      //     },
+      //   },
+      // });
       return tx.leaveRequest.create({
         data: {
           employeeId: data.employeeId,
           leaveTypeId: data.leaveTypeId,
           startDate: data.startDate,
           endDate: data.endDate,
-          totalDays: differenceInDays(data.endDate, data.startDate) + 1,
           status: 'PENDING',
           reason: data?.reason ? data.reason : null,
         },
@@ -76,7 +75,7 @@ export class LeavesService {
     return result;
   }
 
-  async updateStatus(id: string, status: LeaveStatus) {
+  async updateStatus(id: number, status: LeaveStatus) {
     const leaveRequest = await this.prisma.leaveRequest.findUnique({
       where: { id },
     });
@@ -85,32 +84,32 @@ export class LeavesService {
       throw new BadRequestException();
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const leaveBalance = await tx.leaveBalance.findFirst({
-        where: {
-          leaveTypeId: leaveRequest?.leaveTypeId,
-          employeeId: leaveRequest?.employeeId,
-          year: new Date().getFullYear(),
-        },
-      });
+      // const leaveBalance = await tx.leaveBalance.findFirst({
+      //   where: {
+      //     leaveTypeId: leaveRequest?.leaveTypeId,
+      //     employeeId: leaveRequest?.employeeId,
+      //     year: new Date().getFullYear(),
+      //   },
+      // });
 
-      if (!leaveBalance) throw new NotFoundException('Leave balance not found');
+      // if (!leaveBalance) throw new NotFoundException('Leave balance not found');
 
-      if (status === 'REJECTED') {
-        await tx.leaveBalance.update({
-          where: { id: leaveBalance.id },
-          data: {
-            pending: { decrement: leaveRequest.totalDays },
-            entitled: { increment: leaveRequest.totalDays },
-          },
-        });
-      } else if (status === 'APPROVED') {
-        await tx.leaveBalance.update({
-          where: { id: leaveBalance.id },
-          data: {
-            pending: { decrement: leaveRequest.totalDays },
-          },
-        });
-      }
+      // if (status === 'REJECTED') {
+      //   await tx.leaveBalance.update({
+      //     where: { id: leaveBalance.id },
+      //     data: {
+      //       pending: { decrement: leaveRequest.totalDays },
+      //       entitled: { increment: leaveRequest.totalDays },
+      //     },
+      //   });
+      // } else if (status === 'APPROVED') {
+      //   await tx.leaveBalance.update({
+      //     where: { id: leaveBalance.id },
+      //     data: {
+      //       pending: { decrement: leaveRequest.totalDays },
+      //     },
+      //   });
+      // }
 
       return tx.leaveRequest.update({ where: { id }, data: { status } });
     });

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service';
 import { CheckInDto } from './dto/check-in.dto';
@@ -26,7 +26,7 @@ export class AttendanceController {
   }
 
   @Get(':id')
-  async findByEmployeeId(@Param('id') id: string) {
+  async findByEmployeeId(@Param('id') id: number) {
     return this.attendanceService.findByEmployeeId(id);
   }
 }

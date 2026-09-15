@@ -1,7 +1,7 @@
 export interface Payload {
-  sub: string;
+  sub: number;
   email: string;
   role: string;
-  employeeId: string | undefined;
+  employeeId: number | undefined;
   permissions: string[];
 }
