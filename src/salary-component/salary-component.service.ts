@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { CreateSalaryComponentDto } from './dto/create-salary-component.dto';
+import { UpdateSalaryComponentDto } from './dto/update-salary-component.dto';
 
 @Injectable()
 export class SalaryComponentService {
@@ -23,6 +24,13 @@ export class SalaryComponentService {
 
   findOne(id: number) {
     return this.prisma.salaryComponent.findUnique({
+      where: { id },
+    });
+  }
+
+  update(id: number, updateSalaryComponentDto: UpdateSalaryComponentDto) {
+    return this.prisma.salaryComponent.update({
+      data: updateSalaryComponentDto,
       where: { id },
     });
   }
