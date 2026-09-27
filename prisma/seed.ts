@@ -1,1178 +1,1161 @@
-// import { PrismaPg } from '@prisma/adapter-pg';
-
-// import bcrypt from 'bcrypt';
-// import { Prisma, PrismaClient } from 'src/generated/prisma/client';
-
-// const d = (value: string) => new Prisma.Decimal(value);
-// const date = (value: string) => new Date(value);
-// const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-// const prisma = new PrismaClient({ adapter });
-
-// async function main() {
-//   // ---------------------------------------------------------------------------
-//   // 1. Roles & permissions
-//   // ---------------------------------------------------------------------------
-//   const permissions = [
-//     ['employee', 'read'],
-//     ['employee', 'write'],
-//     ['department', 'read'],
-//     ['department', 'write'],
-//     ['leave', 'read'],
-//     ['leave', 'write'],
-//     ['attendance', 'read'],
-//     ['attendance', 'write'],
-//     ['asset', 'read'],
-//     ['asset', 'write'],
-//     ['payroll', 'read'],
-//     ['payroll', 'write'],
-//   ];
-
-//   const permissionMap = new Map<string, string>();
-
-//   for (const [resource, action] of permissions) {
-//     const permission = await prisma.permission.upsert({
-//       where: { resource_action: { resource, action } },
-//       update: {},
-//       create: {
-//         resource,
-//         action,
-//         description: `${action.toUpperCase()} ${resource} records`,
-//       },
-//     });
-
-//     permissionMap.set(`${resource}:${action}`, permission.id);
-//   }
-
-//   const adminRole = await prisma.role.upsert({
-//     where: { name: 'ADMIN' },
-//     update: {},
-//     create: {
-//       name: 'ADMIN',
-//       description: 'Full system access',
-//     },
-//   });
-
-//   const hrRole = await prisma.role.upsert({
-//     where: { name: 'HR_MANAGER' },
-//     update: {},
-//     create: {
-//       name: 'HR_MANAGER',
-//       description: 'Human resources management access',
-//     },
-//   });
-
-//   const employeeRole = await prisma.role.upsert({
-//     where: { name: 'EMPLOYEE' },
-//     update: {},
-//     create: {
-//       name: 'EMPLOYEE',
-//       description: 'Standard employee access',
-//     },
-//   });
-
-//   const allPermissionIds = [...permissionMap.values()];
-
-//   // Set all permissions for ADMIN role
-//   for (const permissionId of allPermissionIds) {
-//     await prisma.rolePermission.upsert({
-//       where: {
-//         roleId_permissionId: {
-//           roleId: adminRole.id,
-//           permissionId,
-//         },
-//       },
-//       update: {},
-//       create: { roleId: adminRole.id, permissionId },
-//     });
-//   }
-
-//   // Set permission for HR_MANAGER role
-//   for (const key of [
-//     'employee:read',
-//     'employee:write',
-//     'department:read',
-//     'department:write',
-//     'leave:read',
-//     'leave:write',
-//     'attendance:read',
-//     'attendance:write',
-//     'asset:read',
-//     'asset:write',
-//     'payroll:read',
-//     'payroll:write',
-//   ]) {
-//     await prisma.rolePermission.upsert({
-//       where: {
-//         roleId_permissionId: {
-//           roleId: hrRole.id,
-//           permissionId: permissionMap.get(key)!,
-//         },
-//       },
-//       update: {},
-//       create: {
-//         roleId: hrRole.id,
-//         permissionId: permissionMap.get(key)!,
-//       },
-//     });
-//   }
-
-//   // Set permission for EMPLOYEE role
-//   for (const key of [
-//     'employee:read',
-//     'leave:read',
-//     'leave:write',
-//     'attendance:read',
-//     'attendance:write',
-//     'asset:read',
-//     'payroll:read',
-//   ]) {
-//     await prisma.rolePermission.upsert({
-//       where: {
-//         roleId_permissionId: {
-//           roleId: employeeRole.id,
-//           permissionId: permissionMap.get(key)!,
-//         },
-//       },
-//       update: {},
-//       create: {
-//         roleId: employeeRole.id,
-//         permissionId: permissionMap.get(key)!,
-//       },
-//     });
-//   }
-
-//   const encryptedPassword = await bcrypt.hash('123456aA', 10);
-
-//   const adminUser = await prisma.user.upsert({
-//     where: { email: 'admin@hrm.com' },
-//     update: {},
-//     create: {
-//       email: 'admin@hrm.com',
-//       passwordHash: encryptedPassword,
-//       roleId: adminRole.id,
-//     },
-//   });
-
-//   const hrUser = await prisma.user.upsert({
-//     where: { email: 'hr@hrm.com' },
-//     update: {},
-//     create: {
-//       email: 'hr@hrm.com',
-//       passwordHash: encryptedPassword,
-//       roleId: hrRole.id,
-//     },
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 2. Departments
-//   // ---------------------------------------------------------------------------
-//   const engineering = await prisma.department.upsert({
-//     where: { code: 'ENG' },
-//     update: {},
-//     create: {
-//       name: 'Engineering',
-//       code: 'ENG',
-//       description: 'Software engineering and technology',
-//     },
-//   });
-
-//   const humanResources = await prisma.department.upsert({
-//     where: { code: 'HR' },
-//     update: {},
-//     create: {
-//       name: 'Human Resources',
-//       code: 'HR',
-//       description: 'People operations and employee services',
-//     },
-//   });
-
-//   const finance = await prisma.department.upsert({
-//     where: { code: 'FIN' },
-//     update: {},
-//     create: {
-//       name: 'Finance',
-//       code: 'FIN',
-//       description: 'Finance and accounting',
-//     },
-//   });
-
-//   const product = await prisma.department.upsert({
-//     where: { code: 'PROD' },
-//     update: {},
-//     create: {
-//       name: 'Product',
-//       code: 'PROD',
-//       description: 'Product management and design',
-//     },
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 3. Positions
-//   // ---------------------------------------------------------------------------
-//   const engineeringManager = await prisma.position.create({
-//     data: {
-//       title: 'Engineering Manager',
-//       code: 'ENG-MGR',
-//       departmentId: engineering.id,
-//       minSalary: d('50000000'),
-//       maxSalary: d('80000000'),
-//     },
-//   });
-
-//   const seniorEngineer = await prisma.position.create({
-//     data: {
-//       title: 'Senior Software Engineer',
-//       code: 'SWE-SR',
-//       departmentId: engineering.id,
-//       minSalary: d('35000000'),
-//       maxSalary: d('60000000'),
-//     },
-//   });
-
-//   const softwareEngineer = await prisma.position.create({
-//     data: {
-//       title: 'Software Engineer',
-//       code: 'SWE',
-//       departmentId: engineering.id,
-//       minSalary: d('20000000'),
-//       maxSalary: d('40000000'),
-//     },
-//   });
-
-//   const hrManagerPosition = await prisma.position.create({
-//     data: {
-//       title: 'HR Manager',
-//       code: 'HR-MGR',
-//       departmentId: humanResources.id,
-//       minSalary: d('30000000'),
-//       maxSalary: d('50000000'),
-//     },
-//   });
-
-//   const accountant = await prisma.position.create({
-//     data: {
-//       title: 'Accountant',
-//       code: 'ACC',
-//       departmentId: finance.id,
-//       minSalary: d('18000000'),
-//       maxSalary: d('35000000'),
-//     },
-//   });
-
-//   const productManager = await prisma.position.create({
-//     data: {
-//       title: 'Product Manager',
-//       code: 'PM',
-//       departmentId: product.id,
-//       minSalary: d('30000000'),
-//       maxSalary: d('55000000'),
-//     },
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 4. Employees
-//   // ---------------------------------------------------------------------------
-//   const adminEmployee = await prisma.employee.create({
-//     data: {
-//       employeeNumber: 'EMP001',
-//       firstName: 'Alex',
-//       lastName: 'Nguyen',
-//       email: 'admin@hrm.com',
-//       workEmail: 'alex.nguyen@hrm.com',
-//       phone: '+84 900 000 001',
-//       dateOfBirth: date('1988-04-12'),
-//       gender: 'MALE',
-//       hireDate: date('2019-01-07'),
-//       confirmationDate: date('2019-04-07'),
-//       employmentType: 'FULL_TIME',
-//       employmentStatus: 'ACTIVE',
-//       positionId: engineeringManager.id,
-//       departmentId: engineering.id,
-//       address: 'District 1, Ho Chi Minh City',
-//       userId: adminUser.id,
-//     },
-//   });
-
-//   const hrEmployee = await prisma.employee.create({
-//     data: {
-//       employeeNumber: 'EMP002',
-//       firstName: 'Mai',
-//       lastName: 'Tran',
-//       email: 'hr@hrm.com',
-//       workEmail: 'mai.tran@hrm.com',
-//       phone: '+84 900 000 002',
-//       dateOfBirth: date('1990-09-21'),
-//       gender: 'FEMALE',
-//       hireDate: date('2020-02-10'),
-//       confirmationDate: date('2020-05-10'),
-//       employmentType: 'FULL_TIME',
-//       employmentStatus: 'ACTIVE',
-//       positionId: hrManagerPosition.id,
-//       departmentId: humanResources.id,
-//       address: 'Binh Thanh District, Ho Chi Minh City',
-//       userId: hrUser.id,
-//     },
-//   });
-
-//   const employees = await Promise.all([
-//     prisma.employee.create({
-//       data: {
-//         employeeNumber: 'EMP003',
-//         firstName: 'Minh',
-//         lastName: 'Pham',
-//         email: 'minh.pham@hrm.com',
-//         workEmail: 'minh.pham@hrm.com',
-//         phone: '+84 900 000 003',
-//         dateOfBirth: date('1994-03-15'),
-//         gender: 'MALE',
-//         hireDate: date('2022-06-01'),
-//         confirmationDate: date('2022-09-01'),
-//         employmentType: 'FULL_TIME',
-//         employmentStatus: 'ACTIVE',
-//         positionId: seniorEngineer.id,
-//         departmentId: engineering.id,
-//         managerId: adminEmployee.id,
-//         address: 'Thu Duc City, Ho Chi Minh City',
-//       },
-//     }),
-//     prisma.employee.create({
-//       data: {
-//         employeeNumber: 'EMP004',
-//         firstName: 'Linh',
-//         lastName: 'Vo',
-//         email: 'linh.vo@hrm.com',
-//         workEmail: 'linh.vo@hrm.com',
-//         phone: '+84 900 000 004',
-//         dateOfBirth: date('1996-11-02'),
-//         gender: 'FEMALE',
-//         hireDate: date('2023-01-16'),
-//         confirmationDate: date('2023-04-16'),
-//         employmentType: 'FULL_TIME',
-//         employmentStatus: 'ACTIVE',
-//         positionId: softwareEngineer.id,
-//         departmentId: engineering.id,
-//         managerId: adminEmployee.id,
-//         address: 'District 7, Ho Chi Minh City',
-//       },
-//     }),
-//     prisma.employee.create({
-//       data: {
-//         employeeNumber: 'EMP005',
-//         firstName: 'Huy',
-//         lastName: 'Le',
-//         email: 'huy.le@hrm.com',
-//         workEmail: 'huy.le@hrm.com',
-//         phone: '+84 900 000 005',
-//         dateOfBirth: date('1992-07-18'),
-//         gender: 'MALE',
-//         hireDate: date('2021-08-02'),
-//         confirmationDate: date('2021-11-02'),
-//         employmentType: 'FULL_TIME',
-//         employmentStatus: 'ACTIVE',
-//         positionId: accountant.id,
-//         departmentId: finance.id,
-//         address: 'District 3, Ho Chi Minh City',
-//       },
-//     }),
-//     prisma.employee.create({
-//       data: {
-//         employeeNumber: 'EMP006',
-//         firstName: 'An',
-//         lastName: 'Nguyen',
-//         email: 'an.nguyen@hrm.com',
-//         workEmail: 'an.nguyen@hrm.com',
-//         phone: '+84 900 000 006',
-//         dateOfBirth: date('1993-12-08'),
-//         gender: 'FEMALE',
-//         hireDate: date('2022-03-14'),
-//         confirmationDate: date('2022-06-14'),
-//         employmentType: 'FULL_TIME',
-//         employmentStatus: 'ACTIVE',
-//         positionId: productManager.id,
-//         departmentId: product.id,
-//         address: 'Phu Nhuan District, Ho Chi Minh City',
-//       },
-//     }),
-//   ]);
-
-//   // ---------------------------------------------------------------------------
-//   // 5. Department heads
-//   // ---------------------------------------------------------------------------
-//   await prisma.department.update({
-//     where: { id: engineering.id },
-//     data: { headId: adminEmployee.id },
-//   });
-
-//   await prisma.department.update({
-//     where: { id: humanResources.id },
-//     data: { headId: hrEmployee.id },
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 6. Bank accounts
-//   // ---------------------------------------------------------------------------
-//   const allEmployees = [adminEmployee, hrEmployee, ...employees];
-
-//   for (const [index, employee] of allEmployees.entries()) {
-//     await prisma.bankAccount.create({
-//       data: {
-//         employeeId: employee.id,
-//         accountName: `${employee.firstName} ${employee.lastName}`,
-//         accountNumber: `01234567${String(index + 1).padStart(2, '0')}`,
-//         currency: 'VND',
-//       },
-//     });
-//   }
-
-//   // ---------------------------------------------------------------------------
-//   // 7. Leave types & balances
-//   // ---------------------------------------------------------------------------
-//   const annualLeave = await prisma.leaveType.create({
-//     data: {
-//       name: 'Annual Leave',
-//       category: 'ANNUAL',
-//       isPaid: true,
-//       requiresApproval: true,
-//     },
-//   });
-
-//   const sickLeave = await prisma.leaveType.create({
-//     data: {
-//       name: 'Sick Leave',
-//       category: 'SICK',
-//       isPaid: true,
-//       requiresApproval: true,
-//     },
-//   });
-
-//   const unpaidLeave = await prisma.leaveType.create({
-//     data: {
-//       name: 'Unpaid Leave',
-//       category: 'UNPAID',
-//       isPaid: false,
-//       requiresApproval: true,
-//     },
-//   });
-
-//   const currentYear = new Date().getFullYear();
-
-//   for (const employee of allEmployees) {
-//     await prisma.leaveBalance.createMany({
-//       data: [
-//         {
-//           employeeId: employee.id,
-//           leaveTypeId: annualLeave.id,
-//           year: currentYear,
-//           entitled: d('12'),
-//           used: d('2'),
-//           pending: d('1'),
-//           carriedOver: d('1'),
-//         },
-//         {
-//           employeeId: employee.id,
-//           leaveTypeId: sickLeave.id,
-//           year: currentYear,
-//           entitled: d('10'),
-//           used: d('1'),
-//           pending: d('0'),
-//           carriedOver: d('0'),
-//         },
-//         {
-//           employeeId: employee.id,
-//           leaveTypeId: unpaidLeave.id,
-//           year: currentYear,
-//           entitled: d('5'),
-//           used: d('0'),
-//           pending: d('0'),
-//           carriedOver: d('0'),
-//         },
-//       ],
-//       skipDuplicates: true,
-//     });
-//   }
-
-//   // ---------------------------------------------------------------------------
-//   // 8. Leave requests
-//   // ---------------------------------------------------------------------------
-//   await prisma.leaveRequest.createMany({
-//     data: [
-//       {
-//         employeeId: employees[0].id,
-//         leaveTypeId: annualLeave.id,
-//         startDate: date(`${currentYear}-06-15T00:00:00+07:00`),
-//         endDate: date(`${currentYear}-06-16T00:00:00+07:00`),
-//         totalDays: d('2'),
-//         reason: 'Family trip',
-//         status: 'APPROVED',
-//         approverId: adminEmployee.id,
-//         approvedAt: date(`${currentYear}-06-01T10:00:00+07:00`),
-//       },
-//       {
-//         employeeId: employees[1].id,
-//         leaveTypeId: sickLeave.id,
-//         startDate: date(`${currentYear}-08-25T00:00:00+07:00`),
-//         endDate: date(`${currentYear}-08-25T00:00:00+07:00`),
-//         totalDays: d('1'),
-//         reason: 'Medical appointment',
-//         status: 'PENDING',
-//         approverId: adminEmployee.id,
-//       },
-//       {
-//         employeeId: employees[2].id,
-//         leaveTypeId: annualLeave.id,
-//         startDate: date(`${currentYear}-07-10T00:00:00+07:00`),
-//         endDate: date(`${currentYear}-07-11T00:00:00+07:00`),
-//         totalDays: d('2'),
-//         reason: 'Personal travel',
-//         status: 'REJECTED',
-//         approverId: hrEmployee.id,
-//         rejectedAt: date(`${currentYear}-07-01T10:00:00+07:00`),
-//         rejectionReason: 'Insufficient team coverage',
-//       },
-//     ],
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 9. Public holidays
-//   // ---------------------------------------------------------------------------
-//   await prisma.publicHoliday.createMany({
-//     data: [
-//       {
-//         name: "New Year's Day",
-//         date: date(`${currentYear}-01-01T00:00:00+07:00`),
-//       },
-//       {
-//         name: 'Independence Day',
-//         date: date(`${currentYear}-09-02T00:00:00+07:00`),
-//       },
-//       {
-//         name: 'Christmas Day',
-//         date: date(`${currentYear}-12-25T00:00:00+07:00`),
-//       },
-//     ],
-//     skipDuplicates: true,
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 10. Shifts & schedules
-//   // ---------------------------------------------------------------------------
-//   const standardShift = await prisma.shift.create({
-//     data: {
-//       name: 'Standard Office',
-//       startTime: '08:30',
-//       endTime: '17:30',
-//       breakMins: 60,
-//     },
-//   });
-
-//   const flexibleShift = await prisma.shift.create({
-//     data: {
-//       name: 'Flexible',
-//       startTime: '09:00',
-//       endTime: '18:00',
-//       breakMins: 60,
-//     },
-//   });
-
-//   for (const employee of allEmployees) {
-//     await prisma.shiftSchedule.create({
-//       data: {
-//         shiftId:
-//           employee.id === employees[1].id ? flexibleShift.id : standardShift.id,
-//         employeeId: employee.id,
-//         startDate: date(`${currentYear}-01-01T00:00:00+07:00`),
-//       },
-//     });
-//   }
-
-//   // ---------------------------------------------------------------------------
-//   // 11. Attendance
-//   // ---------------------------------------------------------------------------
-//   const attendanceDates = [
-//     `${currentYear}-08-26`,
-//     `${currentYear}-08-27`,
-//     `${currentYear}-08-28`,
-//   ];
-
-//   for (const day of attendanceDates) {
-//     for (const [index, employee] of allEmployees.entries()) {
-//       const checkInHour = index === 2 && day.endsWith('27') ? 9 : 8;
-//       const checkInMinute = index === 2 && day.endsWith('27') ? 15 : 30;
-
-//       await prisma.attendance.create({
-//         data: {
-//           employeeId: employee.id,
-//           date: date(`${day}T00:00:00+07:00`),
-//           checkIn: date(
-//             `${day}T${String(checkInHour).padStart(2, '0')}:${String(checkInMinute).padStart(2, '0')}:00+07:00`,
-//           ),
-//           checkOut: date(`${day}T17:30:00+07:00`),
-//           hoursWorked: d(checkInHour === 9 ? '7.25' : '8'),
-//           overtimeHours: d(day.endsWith('28') && index === 0 ? '1.5' : '0'),
-//           status: checkInHour === 9 ? 'LATE' : 'PRESENT',
-//           source: 'WEB',
-//         },
-//       });
-//     }
-//   }
-
-//   // ---------------------------------------------------------------------------
-//   // 12. Assets & assignments
-//   // ---------------------------------------------------------------------------
-//   const laptop1 = await prisma.asset.create({
-//     data: {
-//       name: 'MacBook Pro 14',
-//       category: 'LAPTOP',
-//       serialNumber: 'MBP-EXAMPLE-001',
-//       brand: 'Apple',
-//       model: 'MacBook Pro 14-inch',
-//       purchaseDate: date('2025-01-15'),
-//       purchaseCost: d('55000000'),
-//       status: 'ASSIGNED',
-//     },
-//   });
-
-//   const laptop2 = await prisma.asset.create({
-//     data: {
-//       name: 'ThinkPad X1 Carbon',
-//       category: 'LAPTOP',
-//       serialNumber: 'TP-EXAMPLE-001',
-//       brand: 'Lenovo',
-//       model: 'X1 Carbon',
-//       purchaseDate: date('2024-09-10'),
-//       purchaseCost: d('42000000'),
-//       status: 'ASSIGNED',
-//     },
-//   });
-
-//   await prisma.asset.create({
-//     data: {
-//       name: 'Dell UltraSharp Monitor',
-//       category: 'MONITOR',
-//       serialNumber: 'DELL-EXAMPLE-001',
-//       brand: 'Dell',
-//       model: 'U2723QE',
-//       purchaseDate: date('2025-03-20'),
-//       purchaseCost: d('15000000'),
-//       status: 'AVAILABLE',
-//     },
-//   });
-
-//   await prisma.assetAssignment.createMany({
-//     data: [
-//       {
-//         assetId: laptop1.id,
-//         employeeId: employees[0].id,
-//         assignedAt: date('2025-02-01T09:00:00+07:00'),
-//         condition: 'Good',
-//       },
-//       {
-//         assetId: laptop2.id,
-//         employeeId: employees[1].id,
-//         assignedAt: date('2025-02-15T09:00:00+07:00'),
-//         condition: 'Good',
-//       },
-//     ],
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 13. Compensation
-//   // ---------------------------------------------------------------------------
-//   const compensationByEmployee = [
-//     [adminEmployee, '65000000', engineering, engineeringManager],
-//     [hrEmployee, '40000000', humanResources, hrManagerPosition],
-//     [employees[0], '45000000', engineering, seniorEngineer],
-//     [employees[1], '28000000', engineering, softwareEngineer],
-//     [employees[2], '26000000', finance, accountant],
-//     [employees[3], '42000000', product, productManager],
-//   ] as const;
-
-//   const compensationMap = new Map<string, string>();
-
-//   for (const [employee, salary] of compensationByEmployee) {
-//     const compensation = await prisma.employeeCompensation.create({
-//       data: {
-//         employeeId: employee.id,
-//         effectiveFrom: date('2026-01-01T00:00:00+07:00'),
-//         currency: 'VND',
-//         baseSalary: d(salary),
-//         payType: 'SALARY',
-//         payFrequency: 'MONTHLY',
-//         allowances: {
-//           create: [
-//             {
-//               name: 'Meal Allowance',
-//               amount: d('1000000'),
-//               calculationType: 'FIXED',
-//               isTaxable: false,
-//               isRecurring: true,
-//             },
-//             {
-//               name: 'Transport Allowance',
-//               amount: d('500000'),
-//               calculationType: 'FIXED',
-//               isTaxable: false,
-//               isRecurring: true,
-//             },
-//           ],
-//         },
-//         deductions: {
-//           create: [
-//             {
-//               name: 'Social Insurance',
-//               calculationType: 'PERCENTAGE',
-//               rate: d('0.08'),
-//               isRecurring: true,
-//             },
-//           ],
-//         },
-//       },
-//     });
-
-//     compensationMap.set(employee.id, compensation.id);
-//   }
-
-//   // Salary history examples.
-//   await prisma.salaryHistory.createMany({
-//     data: [
-//       {
-//         employeeId: employees[0].id,
-//         oldSalary: d('40000000'),
-//         newSalary: d('45000000'),
-//         currency: 'VND',
-//         effectiveAt: date('2026-01-01T00:00:00+07:00'),
-//         reason: 'Annual salary review',
-//         approvedById: adminEmployee.id,
-//       },
-//       {
-//         employeeId: employees[1].id,
-//         oldSalary: d('25000000'),
-//         newSalary: d('28000000'),
-//         currency: 'VND',
-//         effectiveAt: date('2026-01-01T00:00:00+07:00'),
-//         reason: 'Promotion adjustment',
-//         approvedById: adminEmployee.id,
-//       },
-//     ],
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 14. Payroll periods + payroll runs
-//   // ---------------------------------------------------------------------------
-
-//   const payrollPeriod = await prisma.payrollPeriod.create({
-//     data: {
-//       periodStart: date('2026-08-01'),
-//       periodEnd: date('2026-08-31'),
-//       payDate: date('2026-09-05'),
-//     },
-//   });
-
-//   // Get employees with their department and position.
-//   // Employee already stores departmentId and positionId,
-//   // so we don't need to duplicate those values in compensationByEmployee.
-
-//   const payrollEmployeeIds = compensationByEmployee.map(
-//     ([employee]) => employee.id,
-//   );
-
-//   const payrollEmployees = await prisma.employee.findMany({
-//     where: {
-//       id: {
-//         in: payrollEmployeeIds,
-//       },
-//     },
-//     include: {
-//       department: true,
-//       position: true,
-//     },
-//   });
-
-//   const payrollEmployeeMap = new Map(
-//     payrollEmployees.map((employee) => [employee.id, employee]),
-//   );
-
-//   // ---------------------------------------------------------------------------
-//   // Build payroll data
-//   // ---------------------------------------------------------------------------
-
-//   const payrollPreview = compensationByEmployee.map(([employee, salary]) => {
-//     const payrollEmployee = payrollEmployeeMap.get(employee.id);
-
-//     if (!payrollEmployee) {
-//       throw new Error(`Employee ${employee.employeeNumber} was not found`);
-//     }
-
-//     const baseSalary = d(salary);
-
-//     const mealAllowance = d('1000000');
-//     const transportAllowance = d('500000');
-
-//     const totalAllowance = mealAllowance.plus(transportAllowance);
-
-//     const grossPay = baseSalary.plus(totalAllowance);
-
-//     // 8% employee social insurance.
-//     const socialInsurance = baseSalary.mul(d('0.08'));
-
-//     // No PIT calculation yet.
-//     const totalTax = d('0');
-
-//     const totalDeduction = socialInsurance.plus(totalTax);
-
-//     const netPay = grossPay.minus(totalDeduction);
-
-//     return {
-//       employee: payrollEmployee,
-
-//       baseSalary,
-
-//       mealAllowance,
-//       transportAllowance,
-//       totalAllowance,
-
-//       grossPay,
-
-//       socialInsurance,
-
-//       totalTax,
-//       totalDeduction,
-
-//       netPay,
-//     };
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // Calculate payroll totals
-//   // ---------------------------------------------------------------------------
-
-//   const payrollTotals = payrollPreview.reduce(
-//     (total, item) => ({
-//       gross: total.gross.plus(item.grossPay),
-//       tax: total.tax.plus(item.totalTax),
-//       net: total.net.plus(item.netPay),
-//     }),
-//     {
-//       gross: d('0'),
-//       tax: d('0'),
-//       net: d('0'),
-//     },
-//   );
-
-//   // ---------------------------------------------------------------------------
-//   // Create payroll run
-//   // ---------------------------------------------------------------------------
-
-//   const payrollRun = await prisma.payrollRun.create({
-//     data: {
-//       payrollPeriodId: payrollPeriod.id,
-
-//       status: 'FINALIZED',
-
-//       totalGross: payrollTotals.gross,
-//       totalNet: payrollTotals.net,
-//       totalTax: payrollTotals.tax,
-
-//       notes: 'Seeded payroll run for August 2026',
-
-//       processedAt: date('2026-09-05T09:00:00+07:00'),
-
-//       processedById: adminEmployee.id,
-
-//       calculationVersion: 'v1',
-//     },
-//   });
-
-//   // ---------------------------------------------------------------------------
-//   // 15. Payroll calculations + payslips
-//   // ---------------------------------------------------------------------------
-
-//   for (const item of payrollPreview) {
-//     const employee = item.employee;
-
-//     // -------------------------------------------------------------------------
-//     // Payroll calculation
-//     // -------------------------------------------------------------------------
-
-//     const calculation = await prisma.payrollCalculation.create({
-//       data: {
-//         payrollRunId: payrollRun.id,
-
-//         employeeId: employee.id,
-
-//         baseSalary: item.baseSalary,
-
-//         // Earnings excluding base salary.
-//         totalEarnings: item.totalAllowance,
-
-//         grossPay: item.grossPay,
-
-//         preTaxDeductions: item.socialInsurance,
-
-//         taxableIncome: item.grossPay,
-
-//         totalTax: item.totalTax,
-
-//         postTaxDeductions: d('0'),
-
-//         netPay: item.netPay,
-
-//         // Store the calculation inputs/results
-//         // for auditing purposes.
-//         snapshot: {
-//           payrollPeriod: {
-//             start: '2026-08-01',
-//             end: '2026-08-31',
-//           },
-
-//           calculationVersion: 'v1',
-
-//           employee: {
-//             id: employee.id,
-//             employeeNumber: employee.employeeNumber,
-//             name: `${employee.firstName} ${employee.lastName}`,
-//           },
-
-//           department: employee.department
-//             ? {
-//                 id: employee.department.id,
-//                 name: employee.department.name,
-//               }
-//             : null,
-
-//           position: employee.position
-//             ? {
-//                 id: employee.position.id,
-//                 title: employee.position.title,
-//               }
-//             : null,
-
-//           baseSalary: item.baseSalary.toString(),
-
-//           allowances: {
-//             meal: item.mealAllowance.toString(),
-//             transport: item.transportAllowance.toString(),
-//             total: item.totalAllowance.toString(),
-//           },
-
-//           grossPay: item.grossPay.toString(),
-
-//           deductions: {
-//             socialInsuranceRate: '0.08',
-//             socialInsurance: item.socialInsurance.toString(),
-//           },
-
-//           tax: {
-//             totalTax: item.totalTax.toString(),
-//           },
-
-//           totalDeduction: item.totalDeduction.toString(),
-
-//           netPay: item.netPay.toString(),
-//         },
-//       },
-//     });
-
-//     // -------------------------------------------------------------------------
-//     // Payroll calculation items
-//     // -------------------------------------------------------------------------
-
-//     await prisma.payrollCalculationItem.createMany({
-//       data: [
-//         {
-//           calculationId: calculation.id,
-
-//           name: 'Base Salary',
-
-//           type: 'EARNING',
-
-//           amount: item.baseSalary,
-
-//           taxable: true,
-//         },
-
-//         {
-//           calculationId: calculation.id,
-
-//           name: 'Meal Allowance',
-
-//           type: 'EARNING',
-
-//           amount: item.mealAllowance,
-
-//           taxable: false,
-//         },
-
-//         {
-//           calculationId: calculation.id,
-
-//           name: 'Transport Allowance',
-
-//           type: 'EARNING',
-
-//           amount: item.transportAllowance,
-
-//           taxable: false,
-//         },
-
-//         {
-//           calculationId: calculation.id,
-
-//           name: 'Social Insurance',
-
-//           type: 'DEDUCTION',
-
-//           amount: item.socialInsurance,
-
-//           taxable: false,
-//         },
-
-//         {
-//           calculationId: calculation.id,
-
-//           name: 'Personal Income Tax',
-
-//           type: 'TAX',
-
-//           amount: item.totalTax,
-
-//           taxable: false,
-//         },
-//       ],
-//     });
-
-//     // -------------------------------------------------------------------------
-//     // Payslip
-//     // -------------------------------------------------------------------------
-
-//     const payslip = await prisma.payslip.create({
-//       data: {
-//         employeeId: employee.id,
-
-//         payrollRunId: payrollRun.id,
-
-//         // Snapshot employee information at payroll time.
-//         employeeNumberSnapshot: employee.employeeNumber,
-
-//         employeeNameSnapshot: `${employee.firstName} ${employee.lastName}`,
-
-//         // Employee already has departmentId/positionId,
-//         // and we loaded the actual relations above.
-//         departmentSnapshot: employee.department?.name ?? null,
-
-//         positionSnapshot: employee.position?.title ?? null,
-
-//         totalAllowance: item.totalAllowance,
-
-//         totalDeduction: item.totalDeduction,
-
-//         grossPay: item.grossPay,
-
-//         netPay: item.netPay,
-
-//         totalTax: item.totalTax,
-
-//         currency: 'VND',
-
-//         paidAt: date('2026-09-05T09:00:00+07:00'),
-//       },
-//     });
-
-//     // -------------------------------------------------------------------------
-//     // Payslip line items
-//     // -------------------------------------------------------------------------
-
-//     await prisma.payslipLineItem.createMany({
-//       data: [
-//         {
-//           payslipId: payslip.id,
-
-//           name: 'Base Salary',
-
-//           type: 'EARNING',
-
-//           amount: item.baseSalary,
-
-//           taxable: true,
-//         },
-
-//         {
-//           payslipId: payslip.id,
-
-//           name: 'Meal Allowance',
-
-//           type: 'EARNING',
-
-//           amount: item.mealAllowance,
-
-//           taxable: false,
-//         },
-
-//         {
-//           payslipId: payslip.id,
-
-//           name: 'Transport Allowance',
-
-//           type: 'EARNING',
-
-//           amount: item.transportAllowance,
-
-//           taxable: false,
-//         },
-
-//         {
-//           payslipId: payslip.id,
-
-//           name: 'Social Insurance',
-
-//           type: 'DEDUCTION',
-
-//           amount: item.socialInsurance,
-
-//           taxable: false,
-//         },
-
-//         {
-//           payslipId: payslip.id,
-
-//           name: 'Personal Income Tax',
-
-//           type: 'TAX',
-
-//           amount: item.totalTax,
-
-//           taxable: false,
-//         },
-//       ],
-//     });
-//   }
-
-//   // ---------------------------------------------------------------------------
-//   // Payroll seed summary
-//   // ---------------------------------------------------------------------------
-
-//   console.log('✅ Payroll seed completed');
-
-//   console.log({
-//     payrollPeriodId: payrollPeriod.id,
-
-//     payrollRunId: payrollRun.id,
-
-//     employeeCount: payrollPreview.length,
-
-//     totalGross: payrollTotals.gross.toString(),
-
-//     totalTax: payrollTotals.tax.toString(),
-
-//     totalNet: payrollTotals.net.toString(),
-//   });
-// }
-
-// main()
-//   .catch((e) => {
-//     console.error('❌ Seed thất bại:', e);
-//     process.exit(1);
-//   })
-//   .finally(async () => {
-//     await prisma.$disconnect();
-//   });
+import { PrismaPg } from '@prisma/adapter-pg';
+
+import bcrypt from 'bcrypt';
+import {
+  AttendanceStatus,
+  EmploymentStatus,
+  EmploymentType,
+  Gender,
+  LeaveStatus,
+  PayrollPeriodStatus,
+  PayslipItemType,
+  PrismaClient,
+  SalaryComponentCalculationType,
+  SalaryComponentType,
+} from 'src/generated/prisma/client';
+
+const decimal = (value: number) => value.toFixed(2);
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
+
+async function main() {
+  // 1. Permission
+  const permissionData = [
+    ['employee', 'create'],
+    ['employee', 'update'],
+    ['employee', 'read'],
+    ['employee', 'delete'],
+
+    ['department', 'create'],
+    ['department', 'read'],
+    ['department', 'update'],
+    ['department', 'delete'],
+
+    //Leave
+    ['leave', 'create'],
+    ['leave', 'read'],
+    ['leave', 'update'],
+    ['leave', 'approve'],
+    ['leave', 'delete'],
+
+    // Attendance
+    ['attendance', 'create'],
+    ['attendance', 'read'],
+    ['attendance', 'update'],
+    ['attendance', 'delete'],
+    // Salary
+    ['salary', 'create'],
+    ['salary', 'read'],
+    ['salary', 'update'],
+    ['salary', 'delete'],
+
+    // Payroll
+    ['payroll', 'create'],
+    ['payroll', 'read'],
+    ['payroll', 'calculate'],
+    ['payroll', 'approve'],
+    ['payroll', 'finalize'],
+
+    //User
+    ['user', 'create'],
+    ['user', 'read'],
+    ['user', 'update'],
+    ['user', 'delete'],
+  ];
+
+  const permissions: Record<string, { id: number }> = {};
+
+  for (const [resource, action] of permissionData) {
+    const permission = await prisma.permission.upsert({
+      where: {
+        resource_action: {
+          resource,
+          action,
+        },
+      },
+      update: {},
+      create: {
+        resource,
+        action,
+        description: `${action} ${resource}`,
+      },
+    });
+
+    permissions[`${resource}:${action}`] = permission;
+  }
+
+  console.log(`Created ${permissionData.length}`);
+
+  // 2. Role
+  const adminRole = await prisma.role.upsert({
+    where: {
+      name: 'ADMIN',
+    },
+    update: {},
+    create: {
+      name: 'ADMIN',
+    },
+  });
+
+  const hrRole = await prisma.role.upsert({
+    where: {
+      name: 'HR',
+    },
+    update: {},
+    create: {
+      name: 'HR',
+    },
+  });
+
+  const employeeRole = await prisma.role.upsert({
+    where: {
+      name: 'EMPLOYEE',
+    },
+    update: {},
+    create: {
+      name: 'EMPLOYEE',
+    },
+  });
+
+  // 3. RolePermission
+  const allPermissionKeys = Object.keys(permissions);
+
+  const hrPermissionKeys = [
+    'employee:create',
+    'employee:read',
+    'employee:update',
+    'department:read',
+    'department:create',
+    'department:update',
+    'leave:create',
+    'leave:read',
+    'leave:update',
+    'leave:approve',
+    'attendance:read',
+    'attendance:update',
+    'salary:read',
+    'salary:create',
+    'salary:update',
+  ];
+
+  //   const payrollPermissionKeys = [
+  //     'employee:read',
+  //     'department:read',
+  //     'attendance:read',
+  //     'salary:read',
+  //     'payroll:create',
+  //     'payroll:read',
+  //     'payroll:calculate',
+  //     'payroll:approve',
+  //     'payroll:finalize',
+  //   ];
+  const employeePermissionKeys = [
+    'employee:read',
+    'leave:create',
+    'leave:read',
+    'attendance:read',
+    'salary:read',
+    'payroll:read',
+  ];
+
+  const assignPermissions = async (
+    roleId: number,
+    permissionKeys: string[],
+  ) => {
+    for (const key of permissionKeys) {
+      const permission = permissions[key];
+
+      if (!permission) continue;
+
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId: permission.id,
+          },
+        },
+        update: {},
+        create: {
+          roleId,
+          permissionId: permission.id,
+        },
+      });
+    }
+  };
+
+  await assignPermissions(adminRole.id, allPermissionKeys);
+  await assignPermissions(hrRole.id, hrPermissionKeys);
+  await assignPermissions(employeeRole.id, employeePermissionKeys);
+
+  console.log('✓ Role permissions created');
+
+  // 4. Department
+  const engineering = await prisma.department.upsert({
+    where: { code: 'ENG' },
+    update: {},
+    create: {
+      name: 'Engineering',
+      code: 'ENG',
+      description: 'Software engineering and technology',
+    },
+  });
+
+  const humanResources = await prisma.department.upsert({
+    where: { code: 'HR' },
+    update: {},
+    create: {
+      name: 'Human Resources',
+      code: 'HR',
+      description: 'Human resources and employee relations',
+    },
+  });
+
+  const finance = await prisma.department.upsert({
+    where: { code: 'FIN' },
+    update: {},
+    create: {
+      name: 'Finance',
+      code: 'FIN',
+      description: 'Finance and accounting',
+    },
+  });
+  const sales = await prisma.department.upsert({
+    where: { code: 'SAL' },
+    update: {},
+    create: {
+      name: 'Sales',
+      code: 'SAL',
+      description: 'Sales and business development',
+    },
+  });
+
+  console.log('✓ Departments created');
+
+  // 5. Employee
+  const ceo = await prisma.employee.upsert({
+    where: { code: 'EMP001' },
+    update: {},
+    create: {
+      code: 'EMP001',
+      firstName: 'Minh',
+      lastName: 'Nguyen',
+      gender: Gender.MALE,
+      email: 'minh.nguyen@example.com',
+      phone: '0901000001',
+      hireDate: new Date('2020-01-06'),
+      confirmationDate: new Date('2020-04-06'),
+      departmentId: engineering.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  const hrManager = await prisma.employee.upsert({
+    where: { code: 'EMP002' },
+    update: {},
+    create: {
+      code: 'EMP002',
+      firstName: 'Lan',
+      lastName: 'Tran',
+      gender: Gender.FEMALE,
+      email: 'lan.tran@example.com',
+      phone: '0901000002',
+      hireDate: new Date('2021-02-01'),
+      confirmationDate: new Date('2021-05-01'),
+      departmentId: humanResources.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+
+  const financeManager = await prisma.employee.upsert({
+    where: { code: 'EMP003' },
+    update: {},
+    create: {
+      code: 'EMP003',
+      firstName: 'Huy',
+      lastName: 'Pham',
+      gender: Gender.MALE,
+      email: 'huy.pham@example.com',
+      phone: '0901000003',
+      hireDate: new Date('2021-03-15'),
+      confirmationDate: new Date('2021-06-15'),
+      departmentId: finance.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  const salesManager = await prisma.employee.upsert({
+    where: { code: 'EMP004' },
+    update: {},
+    create: {
+      code: 'EMP004',
+      firstName: 'Thao',
+      lastName: 'Le',
+      gender: Gender.FEMALE,
+      email: 'thao.le@example.com',
+      phone: '0901000004',
+      hireDate: new Date('2022-01-10'),
+      confirmationDate: new Date('2022-04-10'),
+      departmentId: sales.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  // Subordinates
+  const backendDev = await prisma.employee.upsert({
+    where: { code: 'EMP005' },
+    update: {},
+    create: {
+      code: 'EMP005',
+      firstName: 'An',
+      lastName: 'Vo',
+      gender: Gender.MALE,
+      email: 'an.vo@example.com',
+      phone: '0901000005',
+      hireDate: new Date('2023-02-01'),
+      confirmationDate: new Date('2023-05-01'),
+      departmentId: engineering.id,
+      managerId: ceo.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  const frontendDev = await prisma.employee.upsert({
+    where: { code: 'EMP006' },
+    update: {},
+    create: {
+      code: 'EMP006',
+      firstName: 'Mai',
+      lastName: 'Nguyen',
+      gender: Gender.FEMALE,
+      email: 'mai.nguyen@example.com',
+      phone: '0901000006',
+      hireDate: new Date('2023-06-01'),
+      confirmationDate: new Date('2023-09-01'),
+      departmentId: engineering.id,
+      managerId: ceo.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  const hrStaff = await prisma.employee.upsert({
+    where: { code: 'EMP007' },
+    update: {},
+    create: {
+      code: 'EMP007',
+      firstName: 'Linh',
+      lastName: 'Do',
+      gender: Gender.FEMALE,
+      email: 'linh.do@example.com',
+      phone: '0901000007',
+      hireDate: new Date('2024-01-15'),
+      confirmationDate: new Date('2024-04-15'),
+      departmentId: humanResources.id,
+      managerId: hrManager.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  const accountant = await prisma.employee.upsert({
+    where: { code: 'EMP008' },
+    update: {},
+    create: {
+      code: 'EMP008',
+      firstName: 'Duc',
+      lastName: 'Bui',
+      gender: Gender.MALE,
+      email: 'duc.bui@example.com',
+      phone: '0901000008',
+      hireDate: new Date('2023-09-01'),
+      confirmationDate: new Date('2023-12-01'),
+      departmentId: finance.id,
+      managerId: financeManager.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  const salesStaff = await prisma.employee.upsert({
+    where: { code: 'EMP009' },
+    update: {},
+    create: {
+      code: 'EMP009',
+      firstName: 'Khanh',
+      lastName: 'Pham',
+      gender: Gender.FEMALE,
+      email: 'khanh.pham@example.com',
+      phone: '0901000009',
+      hireDate: new Date('2024-03-01'),
+      confirmationDate: new Date('2024-06-01'),
+      departmentId: sales.id,
+      managerId: salesManager.id,
+      employmentType: EmploymentType.FULL_TIME,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+  const intern = await prisma.employee.upsert({
+    where: { code: 'EMP010' },
+    update: {},
+    create: {
+      code: 'EMP010',
+      firstName: 'Nam',
+      lastName: 'Ho',
+      gender: Gender.MALE,
+      email: 'nam.ho@example.com',
+      phone: '0901000010',
+      hireDate: new Date('2026-07-01'),
+      probationEnd: new Date('2026-09-30'),
+      departmentId: engineering.id,
+      managerId: ceo.id,
+      employmentType: EmploymentType.INTERN,
+      employmentStatus: EmploymentStatus.ACTIVE,
+    },
+  });
+
+  console.log('✓ Employees created');
+
+  // 6. User
+  const passwordHash = await bcrypt.hash('123456', 10);
+
+  await prisma.user.upsert({
+    where: { email: 'minh.nguyen@example.com' },
+    update: { roleId: adminRole.id, password: passwordHash },
+    create: {
+      email: 'minh.nguyen@example.com',
+      password: passwordHash,
+      employeeId: ceo.id,
+      roleId: adminRole.id,
+      isActive: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'lan.tran@example.com' },
+    update: { roleId: hrRole.id, password: passwordHash },
+    create: {
+      email: 'lan.tran@example.com',
+      password: passwordHash,
+      employeeId: hrManager.id,
+      roleId: hrRole.id,
+      isActive: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'an.vo@example.com' },
+    update: { roleId: employeeRole.id, password: passwordHash },
+    create: {
+      email: 'an.vo@example.com',
+      password: passwordHash,
+      employeeId: backendDev.id,
+      roleId: employeeRole.id,
+      isActive: true,
+    },
+  });
+
+  console.log('✓ Users created');
+
+  const annualLeave = await prisma.leaveType.upsert({
+    where: { code: 'ANNUAL' },
+    update: {},
+    create: {
+      name: 'Annual Leave',
+      code: 'ANNUAL',
+      description: 'Paid annual leave',
+      isActive: true,
+    },
+  });
+  const sickLeave = await prisma.leaveType.upsert({
+    where: { code: 'SICK' },
+    update: {},
+    create: {
+      name: 'Sick Leave',
+      code: 'SICK',
+      description: 'Leave due to sickness',
+      isActive: true,
+    },
+  });
+  const unpaidLeave = await prisma.leaveType.upsert({
+    where: { code: 'UNPAID' },
+    update: {},
+    create: {
+      name: 'Unpaid Leave',
+      code: 'UNPAID',
+      description: 'Unpaid personal leave',
+      isActive: true,
+    },
+  });
+  const maternityLeave = await prisma.leaveType.upsert({
+    where: { code: 'MATERNITY' },
+    update: {},
+    create: {
+      name: 'Maternity Leave',
+      code: 'MATERNITY',
+      description: 'Maternity leave',
+      isActive: true,
+    },
+  });
+
+  // 8. Leave request
+  await prisma.leaveRequest.deleteMany();
+  await prisma.leaveRequest.createMany({
+    data: [
+      {
+        employeeId: backendDev.id,
+        leaveTypeId: annualLeave.id,
+        startDate: new Date('2026-08-10'),
+        endDate: new Date('2026-08-12'),
+        reason: 'Family trip',
+        status: LeaveStatus.APPROVED,
+      },
+      {
+        employeeId: frontendDev.id,
+        leaveTypeId: sickLeave.id,
+        startDate: new Date('2026-08-20'),
+        endDate: new Date('2026-08-20'),
+        reason: 'Feeling unwell',
+        status: LeaveStatus.APPROVED,
+      },
+      {
+        employeeId: hrStaff.id,
+        leaveTypeId: annualLeave.id,
+        startDate: new Date('2026-09-28'),
+        endDate: new Date('2026-09-30'),
+        reason: 'Personal vacation',
+        status: LeaveStatus.PENDING,
+      },
+      {
+        employeeId: accountant.id,
+        leaveTypeId: unpaidLeave.id,
+        startDate: new Date('2026-08-05'),
+        endDate: new Date('2026-08-06'),
+        reason: 'Personal matters',
+        status: LeaveStatus.REJECTED,
+      },
+      {
+        employeeId: salesStaff.id,
+        leaveTypeId: annualLeave.id,
+        startDate: new Date('2026-07-15'),
+        endDate: new Date('2026-07-16'),
+        reason: 'Travel',
+        status: LeaveStatus.CANCELLED,
+      },
+      {
+        employeeId: salesStaff.id,
+        leaveTypeId: maternityLeave.id,
+        startDate: new Date('2026-10-01'),
+        endDate: new Date('2026-12-31'),
+        reason: 'Maternity leave',
+        status: LeaveStatus.PENDING,
+      },
+    ],
+  });
+  console.log('✓ Leave data created');
+
+  // 9. Attendance
+  await prisma.attendance.deleteMany();
+  const attendanceEmployees = [
+    backendDev,
+    frontendDev,
+    hrStaff,
+    accountant,
+    salesStaff,
+    intern,
+  ];
+  const attendanceDates = [
+    '2026-09-21',
+    '2026-09-22',
+    '2026-09-23',
+    '2026-09-24',
+    '2026-09-25',
+  ];
+  for (const employee of attendanceEmployees) {
+    for (const dateString of attendanceDates) {
+      const date = new Date(`${dateString}T00:00:00`);
+      let status = AttendanceStatus.PRESENT;
+      let checkIn: Date | null = new Date(`${dateString}T08:30:00`);
+      let checkOut: Date | null = new Date(`${dateString}T17:30:00`);
+      if (employee.code === 'EMP005' && dateString === '2026-09-22') {
+        status = AttendanceStatus.LATE;
+        checkIn = new Date(`${dateString}T09:20:00`);
+      }
+      if (employee.code === 'EMP006' && dateString === '2026-09-23') {
+        status = AttendanceStatus.HALF_DAY;
+        checkOut = new Date(`${dateString}T12:00:00`);
+      }
+      if (employee.code === 'EMP007' && dateString === '2026-09-24') {
+        status = AttendanceStatus.ABSENT;
+        checkIn = null;
+        checkOut = null;
+      }
+      await prisma.attendance.create({
+        data: { employeeId: employee.id, date, checkIn, checkOut, status },
+      });
+    }
+  }
+  console.log('✓ Attendance data created');
+
+  // 10. Salary component
+  const baseSalary = await prisma.salaryComponent.upsert({
+    where: { code: 'BASE' },
+    update: {},
+    create: {
+      name: 'Base Salary',
+      code: 'BASE',
+      description: 'Employee base salary',
+      type: SalaryComponentType.ALLOWANCE,
+      isActive: true,
+    },
+  });
+  const lunchAllowance = await prisma.salaryComponent.upsert({
+    where: { code: 'LUNCH' },
+    update: {},
+    create: {
+      name: 'Lunch Allowance',
+      code: 'LUNCH',
+      description: 'Monthly lunch allowance',
+      type: SalaryComponentType.ALLOWANCE,
+      isActive: true,
+    },
+  });
+  const transportAllowance = await prisma.salaryComponent.upsert({
+    where: { code: 'TRANSPORT' },
+    update: {},
+    create: {
+      name: 'Transport Allowance',
+      code: 'TRANSPORT',
+      description: 'Monthly transportation allowance',
+      type: SalaryComponentType.ALLOWANCE,
+      isActive: true,
+    },
+  });
+  const phoneAllowance = await prisma.salaryComponent.upsert({
+    where: { code: 'PHONE' },
+    update: {},
+    create: {
+      name: 'Phone Allowance',
+      code: 'PHONE',
+      description: 'Monthly phone allowance',
+      type: SalaryComponentType.ALLOWANCE,
+      isActive: true,
+    },
+  });
+  const insurance = await prisma.salaryComponent.upsert({
+    where: { code: 'INSURANCE' },
+    update: {},
+    create: {
+      name: 'Social Insurance',
+      code: 'INSURANCE',
+      description: 'Employee insurance deduction',
+      type: SalaryComponentType.DEDUCTION,
+      isActive: true,
+    },
+  });
+  const tax = await prisma.salaryComponent.upsert({
+    where: { code: 'TAX' },
+    update: {},
+    create: {
+      name: 'Personal Income Tax',
+      code: 'TAX',
+      description: 'Personal income tax',
+      type: SalaryComponentType.DEDUCTION,
+      isActive: true,
+    },
+  });
+  const overtime = await prisma.salaryComponent.upsert({
+    where: { code: 'OVERTIME' },
+    update: {},
+    create: {
+      name: 'Overtime',
+      code: 'OVERTIME',
+      description: 'Overtime payment',
+      type: SalaryComponentType.ALLOWANCE,
+      isActive: true,
+    },
+  });
+  const bonus = await prisma.salaryComponent.upsert({
+    where: { code: 'BONUS' },
+    update: {},
+    create: {
+      name: 'Performance Bonus',
+      code: 'BONUS',
+      description: 'Performance-based bonus',
+      type: SalaryComponentType.ALLOWANCE,
+      isActive: true,
+    },
+  });
+  console.log('✓ Salary components created');
+
+  // 11. Salary structures
+
+  const standardStructure = await prisma.salaryStructure.upsert({
+    where: { code: 'STANDARD' },
+    update: {},
+    create: {
+      name: 'Standard Employee',
+      code: 'STANDARD',
+      description: 'Standard full-time employee salary structure',
+    },
+  });
+  const managerStructure = await prisma.salaryStructure.upsert({
+    where: { code: 'MANAGER' },
+    update: {},
+    create: {
+      name: 'Manager',
+      code: 'MANAGER',
+      description: 'Management salary structure',
+    },
+  });
+  const internStructure = await prisma.salaryStructure.upsert({
+    where: { code: 'INTERN' },
+    update: {},
+    create: {
+      name: 'Intern',
+      code: 'INTERN',
+      description: 'Intern salary structure',
+    },
+  });
+
+  // 12. Salary structure component
+  await prisma.salaryStructureComponent.deleteMany();
+  await prisma.salaryStructureComponent.createMany({
+    data: [
+      // STANDARD
+      {
+        salaryStructureId: standardStructure.id,
+        salaryComponentId: baseSalary.id,
+        sortOrder: 1,
+        value: null,
+        calculationType: SalaryComponentCalculationType.BASE_SALARY,
+      },
+      {
+        salaryStructureId: standardStructure.id,
+        salaryComponentId: lunchAllowance.id,
+        sortOrder: 2,
+        value: decimal(1000000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+      {
+        salaryStructureId: standardStructure.id,
+        salaryComponentId: transportAllowance.id,
+        sortOrder: 3,
+        value: decimal(500000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+      {
+        salaryStructureId: standardStructure.id,
+        salaryComponentId: phoneAllowance.id,
+        sortOrder: 4,
+        value: decimal(300000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+      {
+        salaryStructureId: standardStructure.id,
+        salaryComponentId: insurance.id,
+        sortOrder: 5,
+        value: decimal(10.5),
+        calculationType: SalaryComponentCalculationType.PERCENTAGE,
+      },
+      // MANAGER
+      {
+        salaryStructureId: managerStructure.id,
+        salaryComponentId: baseSalary.id,
+        sortOrder: 1,
+        value: null,
+        calculationType: SalaryComponentCalculationType.BASE_SALARY,
+      },
+      {
+        salaryStructureId: managerStructure.id,
+        salaryComponentId: lunchAllowance.id,
+        sortOrder: 2,
+        value: decimal(1500000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+      {
+        salaryStructureId: managerStructure.id,
+        salaryComponentId: transportAllowance.id,
+        sortOrder: 3,
+        value: decimal(800000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+      {
+        salaryStructureId: managerStructure.id,
+        salaryComponentId: phoneAllowance.id,
+        sortOrder: 4,
+        value: decimal(500000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+      {
+        salaryStructureId: managerStructure.id,
+        salaryComponentId: insurance.id,
+        sortOrder: 5,
+        value: decimal(10.5),
+        calculationType: SalaryComponentCalculationType.PERCENTAGE,
+      },
+      {
+        salaryStructureId: managerStructure.id,
+        salaryComponentId: bonus.id,
+        sortOrder: 6,
+        value: decimal(10),
+        calculationType: SalaryComponentCalculationType.PERCENTAGE,
+      },
+      // INTERN
+      {
+        salaryStructureId: internStructure.id,
+        salaryComponentId: baseSalary.id,
+        sortOrder: 1,
+        value: null,
+        calculationType: SalaryComponentCalculationType.BASE_SALARY,
+      },
+      {
+        salaryStructureId: internStructure.id,
+        salaryComponentId: lunchAllowance.id,
+        sortOrder: 2,
+        value: decimal(500000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+      {
+        salaryStructureId: internStructure.id,
+        salaryComponentId: transportAllowance.id,
+        sortOrder: 3,
+        value: decimal(300000),
+        calculationType: SalaryComponentCalculationType.FIXED,
+      },
+    ],
+  });
+  console.log('✓ Salary structures created');
+
+  // 13. Salary assignment
+  await prisma.salaryStructureAssignment.deleteMany();
+
+  const assignments = [
+    {
+      employeeId: ceo.id,
+      salaryStructureId: managerStructure.id,
+      baseSalary: 45000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: hrManager.id,
+      salaryStructureId: managerStructure.id,
+      baseSalary: 30000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: financeManager.id,
+      salaryStructureId: managerStructure.id,
+      baseSalary: 32000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: salesManager.id,
+      salaryStructureId: managerStructure.id,
+      baseSalary: 30000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: backendDev.id,
+      salaryStructureId: standardStructure.id,
+      baseSalary: 25000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: frontendDev.id,
+      salaryStructureId: standardStructure.id,
+      baseSalary: 23000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: hrStaff.id,
+      salaryStructureId: standardStructure.id,
+      baseSalary: 18000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: accountant.id,
+      salaryStructureId: standardStructure.id,
+      baseSalary: 20000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: salesStaff.id,
+      salaryStructureId: standardStructure.id,
+      baseSalary: 19000000,
+      fromDate: '2026-01-01',
+    },
+    {
+      employeeId: intern.id,
+      salaryStructureId: internStructure.id,
+      baseSalary: 7000000,
+      fromDate: '2026-07-01',
+    },
+  ];
+
+  for (const assignment of assignments) {
+    await prisma.salaryStructureAssignment.create({
+      data: {
+        employeeId: assignment.employeeId,
+        salaryStructureId: assignment.salaryStructureId,
+        baseSalary: decimal(assignment.baseSalary),
+        fromDate: new Date(assignment.fromDate),
+      },
+    });
+  }
+  console.log('✓ Salary assignments created');
+
+  // 14. Payroll periods
+
+  const payrollPeriodAugust = await prisma.payrollPeriod.upsert({
+    where: {
+      startDate_endDate: {
+        startDate: new Date('2026-08-01'),
+        endDate: new Date('2026-08-31'),
+      },
+    },
+    update: {},
+    create: {
+      startDate: new Date('2026-08-01'),
+      endDate: new Date('2026-08-31'),
+      status: PayrollPeriodStatus.FINALIZED,
+      notes: 'August 2026 payroll',
+      processedAt: new Date('2026-09-03T10:00:00'),
+      processById: financeManager.id
+        ? (
+            await prisma.user.findUnique({
+              where: { email: 'huy.pham@example.com' },
+            })
+          )?.id
+        : null,
+    },
+  });
+  const payrollPeriodSeptember = await prisma.payrollPeriod.upsert({
+    where: {
+      startDate_endDate: {
+        startDate: new Date('2026-09-01'),
+        endDate: new Date('2026-09-30'),
+      },
+    },
+    update: {},
+    create: {
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2026-09-30'),
+      status: PayrollPeriodStatus.CALCULATED,
+      notes: 'September 2026 payroll',
+      processedAt: new Date('2026-09-27T10:00:00'),
+      processById: (
+        await prisma.user.findUnique({
+          where: { email: 'huy.pham@example.com' },
+        })
+      )?.id,
+    },
+  });
+  const payrollPeriodOctober = await prisma.payrollPeriod.upsert({
+    where: {
+      startDate_endDate: {
+        startDate: new Date('2026-10-01'),
+        endDate: new Date('2026-10-31'),
+      },
+    },
+    update: {},
+    create: {
+      startDate: new Date('2026-10-01'),
+      endDate: new Date('2026-10-31'),
+      status: PayrollPeriodStatus.DRAFT,
+      notes: 'October 2026 payroll',
+    },
+  });
+  console.log('✓ Payroll periods created');
+
+  // 15. Payslips
+  await prisma.payslipItem.deleteMany();
+  await prisma.payslip.deleteMany();
+  const payrollEmployees = [
+    {
+      employee: backendDev,
+      baseSalary: 25000000,
+      allowance: 1800000,
+      deduction: 2625000,
+      tax: 1200000,
+      bonus: 1500000,
+    },
+    {
+      employee: frontendDev,
+      baseSalary: 23000000,
+      allowance: 1800000,
+      deduction: 2415000,
+      tax: 900000,
+      bonus: 1000000,
+    },
+    {
+      employee: hrStaff,
+      baseSalary: 18000000,
+      allowance: 1800000,
+      deduction: 1890000,
+      tax: 500000,
+      bonus: 500000,
+    },
+    {
+      employee: accountant,
+      baseSalary: 20000000,
+      allowance: 1800000,
+      deduction: 2100000,
+      tax: 650000,
+      bonus: 700000,
+    },
+    {
+      employee: salesStaff,
+      baseSalary: 19000000,
+      allowance: 1800000,
+      deduction: 1995000,
+      tax: 600000,
+      bonus: 1200000,
+    },
+  ];
+  for (const item of payrollEmployees) {
+    const gross = item.baseSalary + item.allowance + item.bonus;
+    const totalDeduction = item.deduction + item.tax;
+    const net = gross - totalDeduction;
+    const payslip = await prisma.payslip.create({
+      data: {
+        employeeId: item.employee.id,
+        payrollPeriodId: payrollPeriodAugust.id,
+        employeeIdSnapshot: item.employee.id,
+        employeeNameSnapshot: `${item.employee.firstName} ${item.employee.lastName}`,
+        departmentSnapshot:
+          item.employee.departmentId === engineering.id
+            ? engineering.name
+            : item.employee.departmentId === humanResources.id
+              ? humanResources.name
+              : item.employee.departmentId === finance.id
+                ? finance.name
+                : sales.name,
+        totalAllowance: decimal(item.allowance + item.bonus),
+        totalDeduction: decimal(totalDeduction),
+        totalGross: decimal(gross),
+        totalNet: decimal(net),
+        totalTax: decimal(item.tax),
+        currency: 'VND',
+        paidAt: new Date('2026-09-05T10:00:00'),
+      },
+    });
+    await prisma.payslipItem.createMany({
+      data: [
+        {
+          payslipId: payslip.id,
+          name: 'Base Salary',
+          amount: decimal(item.baseSalary),
+          type: PayslipItemType.ALLOWANCE,
+        },
+        {
+          payslipId: payslip.id,
+          name: 'Monthly Allowance',
+          amount: decimal(item.allowance),
+          type: PayslipItemType.ALLOWANCE,
+        },
+        {
+          payslipId: payslip.id,
+          name: 'Performance Bonus',
+          amount: decimal(item.bonus),
+          type: PayslipItemType.BONUS,
+        },
+        {
+          payslipId: payslip.id,
+          name: 'Social Insurance',
+          amount: decimal(item.deduction),
+          type: PayslipItemType.DEDUCTION,
+        },
+        {
+          payslipId: payslip.id,
+          name: 'Personal Income Tax',
+          amount: decimal(item.tax),
+          type: PayslipItemType.TAX,
+        },
+      ],
+    });
+  } // September payslips - currently calculated
+  for (const item of payrollEmployees) {
+    const gross = item.baseSalary + item.allowance;
+    const totalDeduction = item.deduction + item.tax;
+    const net = gross - totalDeduction;
+    const payslip = await prisma.payslip.create({
+      data: {
+        employeeId: item.employee.id,
+        payrollPeriodId: payrollPeriodSeptember.id,
+        employeeIdSnapshot: item.employee.id,
+        employeeNameSnapshot: `${item.employee.firstName} ${item.employee.lastName}`,
+        departmentSnapshot:
+          item.employee.departmentId === engineering.id
+            ? engineering.name
+            : item.employee.departmentId === humanResources.id
+              ? humanResources.name
+              : item.employee.departmentId === finance.id
+                ? finance.name
+                : sales.name,
+        totalAllowance: decimal(item.allowance),
+        totalDeduction: decimal(totalDeduction),
+        totalGross: decimal(gross),
+        totalNet: decimal(net),
+        totalTax: decimal(item.tax),
+        currency: 'VND',
+      },
+    });
+    await prisma.payslipItem.createMany({
+      data: [
+        {
+          payslipId: payslip.id,
+          name: 'Base Salary',
+          amount: decimal(item.baseSalary),
+          type: PayslipItemType.ALLOWANCE,
+        },
+        {
+          payslipId: payslip.id,
+          name: 'Monthly Allowance',
+          amount: decimal(item.allowance),
+          type: PayslipItemType.ALLOWANCE,
+        },
+        {
+          payslipId: payslip.id,
+          name: 'Social Insurance',
+          amount: decimal(item.deduction),
+          type: PayslipItemType.DEDUCTION,
+        },
+        {
+          payslipId: payslip.id,
+          name: 'Personal Income Tax',
+          amount: decimal(item.tax),
+          type: PayslipItemType.TAX,
+        },
+      ],
+    });
+  }
+  console.log('✓ Payslips and payslip items created');
+
+  console.log('');
+  console.log('========================================');
+  console.log('🌱 Database seed completed successfully');
+  console.log('========================================');
+  console.log('');
+  console.log('Test accounts:');
+  console.log('----------------------------------------');
+  console.log('Admin:');
+  console.log(' email: minh.nguyen@example.com');
+  console.log(' password: 123456');
+  console.log('');
+  console.log('HR:');
+  console.log(' email: lan.tran@example.com');
+  console.log(' password: 123456');
+  console.log('');
+  console.log('Employee:');
+  console.log(' email: an.vo@example.com');
+  console.log(' password: 123456');
+  console.log('----------------------------------------');
+}
+
+main()
+  .catch((error) => {
+    console.error('❌ Seed failed:');
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
