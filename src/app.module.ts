@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { PayrollModule } from './payroll/payroll.module';
 import { SalaryComponentModule } from './salary-component/salary-component.module';
+import { SalaryStructureModule } from './salary-structure/salary-structure.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { SalaryComponentModule } from './salary-component/salary-component.modul
     AttendanceModule,
     PayrollModule,
     SalaryComponentModule,
+    SalaryStructureModule,
   ],
   controllers: [],
   providers: [],
