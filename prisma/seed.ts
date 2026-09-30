@@ -571,7 +571,7 @@ async function main() {
   for (const employee of attendanceEmployees) {
     for (const dateString of attendanceDates) {
       const date = new Date(`${dateString}T00:00:00`);
-      let status = AttendanceStatus.PRESENT;
+      let status: AttendanceStatus = AttendanceStatus.PRESENT;
       let checkIn: Date | null = new Date(`${dateString}T08:30:00`);
       let checkOut: Date | null = new Date(`${dateString}T17:30:00`);
       if (employee.code === 'EMP005' && dateString === '2026-09-22') {
