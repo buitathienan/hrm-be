@@ -23,7 +23,7 @@ export class SalaryStructureService {
 
   async addComponents(id: number, dto: AddSalaryStructureComponentsDto) {
     // Transaction
-    const result = await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const salaryStructure = await tx.salaryStructure.findUnique({
         where: { id },
       });
@@ -82,11 +82,16 @@ export class SalaryStructureService {
           'Component already added in salary structure',
         );
 
-      const data = dto.components.map((component) => {
-        return { ...component, salaryStructureId: id };
-      });
+      const data = dto.components.map((component) => ({
+        ...component,
+        salaryStructureId: id,
+      }));
 
-      await tx.salaryStructureComponent.createMany({ data });
+      const result = await tx.salaryStructureComponent.createMany({ data });
+      return {
+        message: 'Salary components added successfully',
+        count: result.count,
+      };
     });
   }
 }
