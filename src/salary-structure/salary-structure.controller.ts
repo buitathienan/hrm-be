@@ -1,8 +1,17 @@
-import { Body, Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import { AddSalaryStructureComponentsDto } from './dto/add-salary-structure-component.dto';
 import { SalaryStructureService } from './salary-structure.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('salary-structure')
+@ApiBearerAuth()
 export class SalaryStructureController {
   constructor(private salaryStructureService: SalaryStructureService) {}
 
@@ -12,5 +21,10 @@ export class SalaryStructureController {
     @Body() dto: AddSalaryStructureComponentsDto,
   ) {
     return this.salaryStructureService.addComponents(id, dto);
+  }
+
+  @Get()
+  findAll() {
+    return this.salaryStructureService.findAll();
   }
 }

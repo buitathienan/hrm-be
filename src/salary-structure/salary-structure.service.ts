@@ -94,4 +94,16 @@ export class SalaryStructureService {
       };
     });
   }
+
+  async findAll() {
+    return this.prisma.salaryStructure.findMany({
+      include: {
+        components: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+      },
+    });
+  }
 }
