@@ -7,6 +7,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { CreateSalaryStructureDto } from './dto/create-salary-structure.dto';
 import { AddSalaryStructureComponentsDto } from './dto/add-salary-structure-component.dto';
 import { SalaryComponentCalculationType } from 'src/generated/prisma/enums';
+import { UpdateSalaryStructureComponent } from './dto/update-salary-structure-component.dto';
 
 @Injectable()
 export class SalaryStructureService {
@@ -104,6 +105,81 @@ export class SalaryStructureService {
           },
         },
       },
+    });
+  }
+
+  async findOne(id: number) {
+    const salaryStructure = await this.prisma.salaryStructure.findUnique({
+      where: { id },
+      include: { components: true },
+    });
+    if (!salaryStructure) {
+      throw new NotFoundException('Salary structure not found');
+    }
+    return salaryStructure;
+  }
+
+  async updateComponent(
+    structureId: number,
+    componentId: number,
+    dto: UpdateSalaryStructureComponent,
+  ) {
+    const salaryStructure =
+      await this.prisma.salaryStructureComponent.findFirst({
+        where: {
+          salaryStructureId: structureId,
+          salaryComponentId: componentId,
+        },
+      });
+
+    if (!salaryStructure)
+      throw new NotFoundException(
+        'Cannot found salary component in salary structure',
+      );
+
+    // if (
+    //   dto.calculationType === SalaryComponentCalculationType.BASE_SALARY &&
+    //   dto.value !== undefined
+    // ) {
+    //   throw new BadRequestException(
+    //     'Base salary calculation type cannot have value property',
+    //   );
+    // } else if (
+    //   dto.calculationType !== undefined &&
+    //   dto.calculationType !== SalaryComponentCalculationType.BASE_SALARY &&
+    //   dto.value === undefined
+    // ) {
+    //   throw new BadRequestException('Value property is missing');
+    // } else if (
+    //   dto.value !== undefined &&
+    //   dto.calculationType === undefined &&
+    //   salaryStructure.calculationType ===
+    //     SalaryComponentCalculationType.BASE_SALARY
+    // ) {
+    //   throw new BadRequestException(
+    //     'Value property is only allowed for non-base salary calculation types',
+    //   );
+    // }
+    const finalCalculationType =
+      dto.calculationType ??
+      (dto.calculationType !== salaryStructure.calculationType
+        ? dto.calculationType === SalaryComponentCalculationType.BASE_SALARY
+          ? SalaryComponentCalculationType.BASE_SALARY
+          : dto.calculationType
+        : undefined);
+
+    return this.prisma.salaryStructureComponent.update({
+      data: {
+        sortOrder: dto.sortOrder,
+        calculationType: dto.calculationType,
+        value:
+          salaryStructure.calculationType !==
+            SalaryComponentCalculationType.BASE_SALARY &&
+          dto.calculationType === SalaryComponentCalculationType.BASE_SALARY
+            ? null
+            : dto.value,
+      },
+      where: { id: salaryStructure.id },
     });
   }
 }
