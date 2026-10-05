@@ -111,7 +111,13 @@ export class SalaryStructureService {
   async findOne(id: number) {
     const salaryStructure = await this.prisma.salaryStructure.findUnique({
       where: { id },
-      include: { components: true },
+      include: {
+        components: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+      },
     });
     if (!salaryStructure) {
       throw new NotFoundException('Salary structure not found');
@@ -161,23 +167,17 @@ export class SalaryStructureService {
     //   );
     // }
     const finalCalculationType =
-      dto.calculationType ??
-      (dto.calculationType !== salaryStructure.calculationType
-        ? dto.calculationType === SalaryComponentCalculationType.BASE_SALARY
-          ? SalaryComponentCalculationType.BASE_SALARY
-          : dto.calculationType
-        : undefined);
+      dto.calculationType ?? salaryStructure.calculationType;
 
+    const finalValue =
+      finalCalculationType === SalaryComponentCalculationType.BASE_SALARY
+        ? null
+        : (dto.value ?? salaryStructure.value);
     return this.prisma.salaryStructureComponent.update({
       data: {
         sortOrder: dto.sortOrder,
-        calculationType: dto.calculationType,
-        value:
-          salaryStructure.calculationType !==
-            SalaryComponentCalculationType.BASE_SALARY &&
-          dto.calculationType === SalaryComponentCalculationType.BASE_SALARY
-            ? null
-            : dto.value,
+        calculationType: finalCalculationType,
+        value: finalValue,
       },
       where: { id: salaryStructure.id },
     });
