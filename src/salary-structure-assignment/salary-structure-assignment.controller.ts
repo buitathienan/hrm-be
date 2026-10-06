@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { CreateSalaryStructureAssignmentDto } from './dto/create-salary-structure-assignment.dto';
 import { SalaryStructureAssignmentService } from './salary-structure-assignment.service';
 import { UpdateSalaryStructureAssignmentDto } from './dto/update-salary-structure-assignment.dto';
@@ -20,13 +28,13 @@ export class SalaryStructureAssignmentController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.salaryStructureAssigmentService.findOne(id);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateSalaryStructureAssignmentDto,
   ) {
     return this.salaryStructureAssigmentService.update(id, dto);
