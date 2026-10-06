@@ -11,6 +11,7 @@ import { PayrollModule } from './payroll/payroll.module';
 import { SalaryComponentModule } from './salary-component/salary-component.module';
 import { SalaryStructureModule } from './salary-structure/salary-structure.module';
 import { SalaryStructureAssignmentModule } from './salary-structure-assignment/salary-structure-assignment.module';
+import { PayrollPeriodModule } from './payroll-period/payroll-period.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SalaryStructureAssignmentModule } from './salary-structure-assignment/s
     SalaryComponentModule,
     SalaryStructureModule,
     SalaryStructureAssignmentModule,
+    PayrollPeriodModule,
   ],
   controllers: [],
   providers: [],
