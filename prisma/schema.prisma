@@ -295,6 +295,7 @@ model SalaryStructure {
   description String?
   components  SalaryStructureComponent[]
   assignments SalaryStructureAssignment[]
+  isActive Boolean  @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

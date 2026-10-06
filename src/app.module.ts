@@ -10,6 +10,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { PayrollModule } from './payroll/payroll.module';
 import { SalaryComponentModule } from './salary-component/salary-component.module';
 import { SalaryStructureModule } from './salary-structure/salary-structure.module';
+import { SalaryStructureAssignmentModule } from './salary-structure-assignment/salary-structure-assignment.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SalaryStructureModule } from './salary-structure/salary-structure.modul
     PayrollModule,
     SalaryComponentModule,
     SalaryStructureModule,
+    SalaryStructureAssignmentModule,
   ],
   controllers: [],
   providers: [],
