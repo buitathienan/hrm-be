@@ -10,7 +10,9 @@ import {
 import { PayrollPeriodService } from './payroll-period.service';
 import { CreatePayrollPeriodDto } from './dto/create-payroll-period.dto';
 import { UpdatePayrollPeriodDto } from './dto/update-payroll-period.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('payroll-periods')
 export class PayrollPeriodController {
   constructor(private payrollPeriodService: PayrollPeriodService) {}
@@ -21,7 +23,10 @@ export class PayrollPeriodController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, dto: UpdatePayrollPeriodDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePayrollPeriodDto,
+  ) {
     return this.payrollPeriodService.update(id, dto);
   }
 
@@ -31,7 +36,12 @@ export class PayrollPeriodController {
   }
 
   @Get(':id')
-  findOne(@Param(':id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.payrollPeriodService.findOne(id);
+  }
+
+  @Post(':id/process')
+  process(@Param('id', ParseIntPipe) id: number) {
+    return this.payrollPeriodService.process(id);
   }
 }

@@ -10,7 +10,9 @@ import {
 import { CreateSalaryStructureAssignmentDto } from './dto/create-salary-structure-assignment.dto';
 import { SalaryStructureAssignmentService } from './salary-structure-assignment.service';
 import { UpdateSalaryStructureAssignmentDto } from './dto/update-salary-structure-assignment.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('salary-structure-assignments')
 export class SalaryStructureAssignmentController {
   constructor(

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDate, IsInt, IsOptional, Min } from 'class-validator';
+import { IsDate, IsInt, IsNumber, IsOptional, Min } from 'class-validator';
 
 export class CreateSalaryStructureAssignmentDto {
   @IsInt()

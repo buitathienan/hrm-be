@@ -3,10 +3,12 @@ import { CreateSalaryStructureAssignmentDto } from './dto/create-salary-structur
 import {
   BadRequestException,
   ConflictException,
+  Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateSalaryStructureAssignmentDto } from './dto/update-salary-structure-assignment.dto';
 
+@Injectable()
 export class SalaryStructureAssignmentService {
   constructor(private readonly prisma: PrismaService) {}
 

@@ -7,11 +7,11 @@ import { EmployeesModule } from './employees/employees.module';
 import { LeaveModule } from './leaves/leaves.module';
 import { AuthModule } from './auth/auth.module';
 import { AttendanceModule } from './attendance/attendance.module';
-import { PayrollModule } from './payroll/payroll.module';
 import { SalaryComponentModule } from './salary-component/salary-component.module';
 import { SalaryStructureModule } from './salary-structure/salary-structure.module';
 import { SalaryStructureAssignmentModule } from './salary-structure-assignment/salary-structure-assignment.module';
 import { PayrollPeriodModule } from './payroll-period/payroll-period.module';
+import { PayslipModule } from './payslips/payslip.module';
 
 @Module({
   imports: [
@@ -22,11 +22,11 @@ import { PayrollPeriodModule } from './payroll-period/payroll-period.module';
     LeaveModule,
     AuthModule,
     AttendanceModule,
-    PayrollModule,
     SalaryComponentModule,
     SalaryStructureModule,
     SalaryStructureAssignmentModule,
     PayrollPeriodModule,
+    PayslipModule,
   ],
   controllers: [],
   providers: [],
