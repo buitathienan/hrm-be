@@ -175,7 +175,7 @@ CREATE TABLE "Payslip" (
     "employeeIdSnapshot" INTEGER NOT NULL,
     "employeeNameSnapshot" TEXT NOT NULL,
     "departmentSnapshot" TEXT,
-    "totalAllowance" DECIMAL(15,2) NOT NULL,
+    "totalEarning" DECIMAL(15,2) NOT NULL,
     "totalDeduction" DECIMAL(15,2) NOT NULL,
     "totalGross" DECIMAL(15,2) NOT NULL,
     "totalNet" DECIMAL(15,2) NOT NULL,
@@ -221,6 +221,7 @@ CREATE TABLE "SalaryStructure" (
     "name" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "description" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

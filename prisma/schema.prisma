@@ -245,7 +245,7 @@ model Payslip {
   employeeIdSnapshot   Int
   employeeNameSnapshot String
   departmentSnapshot   String?
-  totalAllowance       Decimal       @db.Decimal(15, 2)
+  totalEarning       Decimal       @db.Decimal(15, 2)
   totalDeduction       Decimal       @db.Decimal(15, 2)
   totalGross           Decimal       @db.Decimal(15, 2)
   totalNet             Decimal       @db.Decimal(15, 2)

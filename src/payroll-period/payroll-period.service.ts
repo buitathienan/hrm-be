@@ -8,6 +8,7 @@ import { CreatePayrollPeriodDto } from './dto/create-payroll-period.dto';
 import { PrismaService } from 'src/database/prisma.service';
 import { UpdatePayrollPeriodDto } from './dto/update-payroll-period.dto';
 import { Decimal } from '@prisma/client/runtime/client';
+import { SalaryComponentType } from 'src/generated/prisma/enums';
 
 @Injectable()
 export class PayrollPeriodService {
@@ -146,8 +147,11 @@ export class PayrollPeriodService {
     });
 
     for (const assignment of assignments) {
-      const payslipItems: { name: string; type: string; amount: Decimal }[] =
-        [];
+      const payslipItems: {
+        name: string;
+        type: SalaryComponentType;
+        amount: Decimal;
+      }[] = [];
       let totalEarning = new Decimal(0);
       let totalDeduction = new Decimal(0);
       let totalGross = new Decimal(0);
@@ -181,6 +185,28 @@ export class PayrollPeriodService {
 
       totalGross = totalEarning;
       totalNet = totalGross.minus(totalDeduction);
+
+      const payslip = await this.prisma.payslip.create({
+        data: {
+          employeeId: assignment.employeeId,
+          employeeIdSnapshot: assignment.employeeId,
+          employeeNameSnapshot: `${assignment.employee.firstName} ${assignment.employee.lastName}`,
+          payrollPeriodId: periodId,
+          totalEarning: totalEarning,
+          totalDeduction: totalDeduction,
+          totalGross,
+          totalNet,
+          totalTax: new Decimal(0),
+          currency: 'VND',
+          departmentSnapshot: assignment.employee.department.name,
+          paidAt: new Date(),
+          payslipItems: {
+            createMany: {
+              data: payslipItems,
+            },
+          },
+        },
+      });
     }
 
     return assignments;
