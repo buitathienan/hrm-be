@@ -8,7 +8,10 @@ import { CreatePayrollPeriodDto } from './dto/create-payroll-period.dto';
 import { PrismaService } from 'src/database/prisma.service';
 import { UpdatePayrollPeriodDto } from './dto/update-payroll-period.dto';
 import { Decimal } from '@prisma/client/runtime/client';
-import { SalaryComponentType } from 'src/generated/prisma/enums';
+import {
+  PayrollPeriodStatus,
+  SalaryComponentType,
+} from 'src/generated/prisma/enums';
 
 @Injectable()
 export class PayrollPeriodService {
@@ -94,121 +97,143 @@ export class PayrollPeriodService {
   }
 
   async process(periodId: number) {
-    const payrollPeriod = await this.prisma.payrollPeriod.findUnique({
-      where: { id: periodId },
-    });
-    if (!payrollPeriod) throw new NotFoundException('Payroll period not found');
-    if (payrollPeriod.status !== 'DRAFT')
-      throw new ConflictException('Payroll period status is not DRAFT');
-
-    // Find all valid salary assignments
-    const assignments = await this.prisma.salaryStructureAssignment.findMany({
-      where: {
-        fromDate: {
-          lte: payrollPeriod.startDate,
+    await this.prisma.$transaction(async (tx) => {
+      const payrollPeriod = await tx.payrollPeriod.findUnique({
+        where: { id: periodId },
+      });
+      if (!payrollPeriod)
+        throw new NotFoundException('Payroll period not found');
+      const result = await tx.payrollPeriod.updateMany({
+        where: {
+          id: periodId,
+          status: PayrollPeriodStatus.DRAFT,
         },
-        OR: [
-          {
-            toDate: null,
-          },
-          {
-            toDate: {
-              gte: payrollPeriod.endDate,
-            },
-          },
-        ],
-        salaryStructure: {
-          isActive: true,
-        },
-      },
-      include: {
-        salaryStructure: {
-          include: {
-            components: {
-              include: {
-                salaryComponent: true,
-              },
-            },
-          },
-        },
-        employee: {
-          select: {
-            id: true,
-            lastName: true,
-            firstName: true,
-            department: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    for (const assignment of assignments) {
-      const payslipItems: {
-        name: string;
-        type: SalaryComponentType;
-        amount: Decimal;
-      }[] = [];
-      let totalEarning = new Decimal(0);
-      let totalDeduction = new Decimal(0);
-      let totalGross = new Decimal(0);
-      let totalNet = new Decimal(0);
-
-      for (const component of assignment.salaryStructure.components) {
-        let amount = new Decimal(0);
-        const name = component.salaryComponent.name;
-        const type = component.salaryComponent.type;
-
-        if (component.calculationType === 'FIXED') {
-          if (component.value === null)
-            throw new BadRequestException(
-              'FIXED calculation type requires a non-null value',
-            );
-          amount = component.value;
-        } else if (component.calculationType === 'BASE_SALARY') {
-          amount = assignment.baseSalary;
-        }
-
-        payslipItems.push({
-          name,
-          type,
-          amount,
-        });
-
-        if (type === 'ALLOWANCE') totalEarning = totalEarning.add(amount);
-        else if (type === 'DEDUCTION')
-          totalDeduction = totalDeduction.add(amount);
-      }
-
-      totalGross = totalEarning;
-      totalNet = totalGross.minus(totalDeduction);
-
-      const payslip = await this.prisma.payslip.create({
         data: {
-          employeeId: assignment.employeeId,
-          employeeIdSnapshot: assignment.employeeId,
-          employeeNameSnapshot: `${assignment.employee.firstName} ${assignment.employee.lastName}`,
-          payrollPeriodId: periodId,
-          totalEarning: totalEarning,
-          totalDeduction: totalDeduction,
-          totalGross,
-          totalNet,
-          totalTax: new Decimal(0),
-          currency: 'VND',
-          departmentSnapshot: assignment.employee.department.name,
-          paidAt: new Date(),
-          payslipItems: {
-            createMany: {
-              data: payslipItems,
+          status: PayrollPeriodStatus.CALCULATING,
+        },
+      });
+      if (result.count === 0)
+        throw new ConflictException(
+          'Payroll period does not exist in DRAFT status',
+        );
+
+      // Find all valid salary assignments
+      const assignments = await tx.salaryStructureAssignment.findMany({
+        where: {
+          fromDate: {
+            lte: payrollPeriod.startDate,
+          },
+          OR: [
+            {
+              toDate: null,
+            },
+            {
+              toDate: {
+                gte: payrollPeriod.endDate,
+              },
+            },
+          ],
+          salaryStructure: {
+            isActive: true,
+          },
+        },
+        include: {
+          salaryStructure: {
+            include: {
+              components: {
+                include: {
+                  salaryComponent: true,
+                },
+              },
+            },
+          },
+          employee: {
+            select: {
+              id: true,
+              lastName: true,
+              firstName: true,
+              department: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
         },
       });
-    }
+      if (assignments.length === 0)
+        throw new BadRequestException('No assignments found');
 
-    return assignments;
+      for (const assignment of assignments) {
+        const payslipItems: {
+          name: string;
+          type: SalaryComponentType;
+          amount: Decimal;
+        }[] = [];
+        let totalEarning = new Decimal(0);
+        let totalDeduction = new Decimal(0);
+        let totalGross = new Decimal(0);
+        let totalNet = new Decimal(0);
+
+        for (const component of assignment.salaryStructure.components) {
+          let amount = new Decimal(0);
+          const name = component.salaryComponent.name;
+          const type = component.salaryComponent.type;
+
+          if (component.calculationType === 'FIXED') {
+            if (component.value === null)
+              throw new BadRequestException(
+                'FIXED calculation type requires a non-null value',
+              );
+            amount = component.value;
+          } else if (component.calculationType === 'BASE_SALARY') {
+            amount = assignment.baseSalary;
+          }
+
+          payslipItems.push({
+            name,
+            type,
+            amount,
+          });
+
+          if (type === 'ALLOWANCE') totalEarning = totalEarning.add(amount);
+          else if (type === 'DEDUCTION')
+            totalDeduction = totalDeduction.add(amount);
+        }
+
+        totalGross = totalEarning;
+        totalNet = totalGross.minus(totalDeduction);
+
+        const payslip = await tx.payslip.create({
+          data: {
+            employeeId: assignment.employeeId,
+            employeeIdSnapshot: assignment.employeeId,
+            employeeNameSnapshot: `${assignment.employee.firstName} ${assignment.employee.lastName}`,
+            payrollPeriodId: periodId,
+            totalEarning,
+            totalDeduction,
+            totalGross,
+            totalNet,
+            totalTax: new Decimal(0),
+            currency: 'VND',
+            departmentSnapshot: assignment.employee.department?.name ?? null,
+            payslipItems: {
+              createMany: {
+                data: payslipItems,
+              },
+            },
+          },
+        });
+      }
+
+      await tx.payrollPeriod.update({
+        where: {
+          id: periodId,
+        },
+        data: {
+          status: PayrollPeriodStatus.CALCULATED,
+        },
+      });
+    });
   }
 }
