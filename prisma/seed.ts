@@ -1028,7 +1028,7 @@ async function main() {
               : item.employee.departmentId === finance.id
                 ? finance.name
                 : sales.name,
-        totalAllowance: decimal(item.allowance + item.bonus),
+        totalEarning: decimal(item.allowance + item.bonus),
         totalDeduction: decimal(totalDeduction),
         totalGross: decimal(gross),
         totalNet: decimal(net),
@@ -1090,7 +1090,7 @@ async function main() {
               : item.employee.departmentId === finance.id
                 ? finance.name
                 : sales.name,
-        totalAllowance: decimal(item.allowance),
+        totalEarning: decimal(item.allowance),
         totalDeduction: decimal(totalDeduction),
         totalGross: decimal(gross),
         totalNet: decimal(net),
