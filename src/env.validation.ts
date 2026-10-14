@@ -9,4 +9,7 @@ export const envValidation = Joi.object({
   PGADMIN_DEFAULT_PASSWORD: Joi.string().required(),
   JWT_SECRET: Joi.string().required(),
   JWT_EXPIRES_IN: Joi.string().required(),
+  OFFICE_LATITUDE: Joi.number().required(),
+  OFFICE_LONGITUDE: Joi.number().required(),
+  OFFICE_RADIUS_METERS: Joi.number().required(),
 });

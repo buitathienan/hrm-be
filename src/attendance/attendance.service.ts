@@ -8,25 +8,43 @@ import { PrismaService } from 'src/database/prisma.service';
 import { CheckInDto } from './dto/check-in.dto';
 import { AttendanceStatus } from 'src/generated/prisma/enums';
 import { CheckOutDto } from './dto/check-out.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+  ) {}
 
   async checkIn(employeeId: number, data: CheckInDto) {
-    if (!data.latitude || !data.longitude) {
-      throw new BadRequestException(
-        'Location coordinates are required to clock in.',
-      );
+    if (
+      data.latitude < -90 ||
+      data.latitude > 90 ||
+      data.longitude < -180 ||
+      data.longitude > 180 ||
+      !Number.isFinite(data.latitude) ||
+      !Number.isFinite(data.longitude)
+    ) {
+      throw new BadRequestException('Valid location coordinates are required.');
     }
 
+    const officeLatitude = Number(this.config.get<number>('OFFICE_LATITUDE'));
+
+    const officeLongitude = Number(this.config.get<number>('OFFICE_LONGITUDE'));
+
+    const radius = Number(this.config.get<string>('OFFICE_RADIUS_METERS'));
     const now = new Date(); // Time
     const today = new Date(); // Date
     today.setHours(0, 0, 0, 0);
 
-    const distance = calculateDistance(data.latitude, data.longitude, 1, 1);
-    if (distance > 500) {
-      // 500 mean 500m
+    const distance = calculateDistance(
+      data.latitude,
+      data.longitude,
+      officeLatitude,
+      officeLongitude,
+    );
+    if (distance > radius) {
       throw new ForbiddenException(
         'You are not within the allowed office radius.',
       );
