@@ -107,13 +107,20 @@ export class AttendanceService {
       );
     }
 
+    const officeLatitude = Number(this.config.get<number>('OFFICE_LATITUDE'));
+    const officeLongitude = Number(this.config.get<number>('OFFICE_LONGITUDE'));
+    const radius = Number(this.config.get<string>('OFFICE_RADIUS_METERS'));
     const now = new Date();
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
-    const distance = calculateDistance(data.latitude, data.longitude, 1, 1);
-    if (distance > 500) {
-      // 500 mean 500m
+    const distance = calculateDistance(
+      data.latitude,
+      data.longitude,
+      officeLatitude,
+      officeLongitude,
+    );
+    if (distance > radius) {
       throw new ForbiddenException(
         'You are not within the allowed office radius.',
       );
@@ -134,6 +141,7 @@ export class AttendanceService {
     return this.prisma.attendance.update({
       where: {
         id: checkIn.id,
+        checkOut: null,
       },
       data: {
         checkOut: now,
