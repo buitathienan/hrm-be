@@ -5,12 +5,14 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service';
 import { CheckInDto } from './dto/check-in.dto';
 import { CheckOutDto } from './dto/check-out.dto';
+import { AttendanceQueryDto } from './dto/attendance-query.dto';
 
 @Controller('attendance')
 @ApiTags('Attendance')
@@ -29,8 +31,8 @@ export class AttendanceController {
   }
 
   @Get()
-  async findAll() {
-    return this.attendanceService.findAll();
+  async findAll(@Query() queryDto: AttendanceQueryDto) {
+    return this.attendanceService.findAll(queryDto);
   }
 
   @Get(':id')

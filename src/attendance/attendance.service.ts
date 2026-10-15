@@ -9,6 +9,7 @@ import { CheckInDto } from './dto/check-in.dto';
 import { AttendanceStatus } from 'src/generated/prisma/enums';
 import { CheckOutDto } from './dto/check-out.dto';
 import { ConfigService } from '@nestjs/config';
+import { AttendanceQueryDto } from './dto/attendance-query.dto';
 
 @Injectable()
 export class AttendanceService {
@@ -149,12 +150,37 @@ export class AttendanceService {
     });
   }
 
-  async findAll() {
-    return this.prisma.attendance.findMany();
+  async findAll(query: AttendanceQueryDto) {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.attendance.findMany({
+        skip,
+        take: limit,
+        orderBy: [{ date: 'desc' }, { id: 'desc' }],
+      }),
+      this.prisma.attendance.count(),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findByEmployeeId(id: number) {
-    return this.prisma.attendance.findFirst({ where: { employeeId: id } });
+    return this.prisma.attendance.findMany({
+      where: { employeeId: id },
+      orderBy: {
+        date: 'desc',
+      },
+    });
   }
 }
 
