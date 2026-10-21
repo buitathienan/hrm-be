@@ -36,7 +36,7 @@ export class AttendanceController {
   }
 
   @Get(':id')
-  async findByEmployeeId(@Param('id', ParseIntPipe) employeeId: number) {
-    return this.attendanceService.findByEmployeeId(employeeId);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    return this.attendanceService.findById(id);
   }
 }

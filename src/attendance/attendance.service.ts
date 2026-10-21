@@ -10,6 +10,7 @@ import { AttendanceStatus } from 'src/generated/prisma/enums';
 import { CheckOutDto } from './dto/check-out.dto';
 import { ConfigService } from '@nestjs/config';
 import { AttendanceQueryDto } from './dto/attendance-query.dto';
+import { Prisma } from 'src/generated/prisma/client';
 
 @Injectable()
 export class AttendanceService {
@@ -151,16 +152,33 @@ export class AttendanceService {
   }
 
   async findAll(query: AttendanceQueryDto) {
-    const { page, limit } = query;
+    const { page, limit, startDate, endDate, status, employeeId } = query;
     const skip = (page - 1) * limit;
+
+    if (startDate && endDate && startDate > endDate) {
+      throw new BadRequestException('startDate is greeter than endDate');
+    }
+
+    const where: Prisma.AttendanceWhereInput = {
+      ...(employeeId !== undefined && { employeeId }),
+      ...(status !== undefined && { status }),
+
+      ...((startDate || endDate) && {
+        date: {
+          ...(startDate && { gte: new Date(`${startDate}T00:00:00.000Z`) }),
+          ...(endDate && { lte: new Date(`${endDate}T00:00:00.000Z`) }),
+        },
+      }),
+    };
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.attendance.findMany({
         skip,
         take: limit,
         orderBy: [{ date: 'desc' }, { id: 'desc' }],
+        where,
       }),
-      this.prisma.attendance.count(),
+      this.prisma.attendance.count({ where }),
     ]);
 
     return {
@@ -174,12 +192,9 @@ export class AttendanceService {
     };
   }
 
-  async findByEmployeeId(id: number) {
-    return this.prisma.attendance.findMany({
-      where: { employeeId: id },
-      orderBy: {
-        date: 'desc',
-      },
+  async findById(id: number) {
+    return this.prisma.attendance.findUnique({
+      where: { id },
     });
   }
 }

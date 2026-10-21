@@ -1,5 +1,14 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsDate,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
+import { AttendanceStatus } from 'src/generated/prisma/enums';
 
 export class AttendanceQueryDto {
   @IsInt()
@@ -14,4 +23,21 @@ export class AttendanceQueryDto {
   @IsOptional()
   @Type(() => Number)
   limit = 10;
+
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  employeeId?: number;
+
+  @IsDateString()
+  @IsOptional()
+  startDate?: string;
+
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
+
+  @IsEnum(AttendanceStatus)
+  @IsOptional()
+  status?: AttendanceStatus;
 }
