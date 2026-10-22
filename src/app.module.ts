@@ -12,6 +12,10 @@ import { SalaryStructureModule } from './salary-structure/salary-structure.modul
 import { SalaryStructureAssignmentModule } from './salary-structure-assignment/salary-structure-assignment.module';
 import { PayrollPeriodModule } from './payroll-period/payroll-period.module';
 import { PayslipModule } from './payslips/payslip.module';
+import { AuthGuard } from './auth/guards/auth.guard';
+import { APP_GUARD } from '@nestjs/core';
+import { PermissionsGuard } from './auth/guards/permissions.guard';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -29,6 +33,15 @@ import { PayslipModule } from './payslips/payslip.module';
     PayslipModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+  ],
 })
 export class AppModule {}

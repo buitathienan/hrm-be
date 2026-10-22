@@ -13,6 +13,7 @@ import { AttendanceService } from './attendance.service';
 import { CheckInDto } from './dto/check-in.dto';
 import { CheckOutDto } from './dto/check-out.dto';
 import { AttendanceQueryDto } from './dto/attendance-query.dto';
+import { Permissions } from 'src/auth/decorators/permissons.decorator';
 
 @Controller('attendance')
 @ApiTags('Attendance')
@@ -31,6 +32,7 @@ export class AttendanceController {
   }
 
   @Get()
+  @Permissions('read_attendance')
   async findAll(@Query() queryDto: AttendanceQueryDto) {
     return this.attendanceService.findAll(queryDto);
   }
