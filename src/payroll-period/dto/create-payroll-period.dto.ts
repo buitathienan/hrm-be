@@ -17,5 +17,5 @@ export class CreatePayrollPeriodDto {
   @IsOptional()
   @ApiPropertyOptional()
   @MaxLength(500)
-  note?: string;
+  notes?: string;
 }

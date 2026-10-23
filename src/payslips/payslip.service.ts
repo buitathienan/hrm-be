@@ -6,7 +6,11 @@ export class PayslipService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    const payslip = await this.prisma.payslip.findMany();
+    const payslip = await this.prisma.payslip.findMany({
+      include: {
+        payslipItems: true,
+      },
+    });
     return payslip;
   }
 
@@ -14,6 +18,9 @@ export class PayslipService {
     const payslip = await this.prisma.payslip.findUnique({
       where: {
         id,
+      },
+      include: {
+        payslipItems: true,
       },
     });
     if (!payslip) throw new NotFoundException('Payslip not found');

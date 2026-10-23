@@ -268,7 +268,7 @@ export class PayrollPeriodService {
         });
       }
 
-      await tx.payrollPeriod.update({
+      return await tx.payrollPeriod.update({
         where: {
           id: periodId,
         },
