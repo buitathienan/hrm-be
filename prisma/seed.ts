@@ -722,13 +722,6 @@ async function main() {
       // STANDARD
       {
         salaryStructureId: standardStructure.id,
-        salaryComponentId: baseSalary.id,
-        sortOrder: 1,
-        value: null,
-        calculationType: SalaryComponentCalculationType.BASE_SALARY,
-      },
-      {
-        salaryStructureId: standardStructure.id,
         salaryComponentId: lunchAllowance.id,
         sortOrder: 2,
         value: decimal(1000000),
@@ -756,13 +749,7 @@ async function main() {
         calculationType: SalaryComponentCalculationType.PERCENTAGE,
       },
       // MANAGER
-      {
-        salaryStructureId: managerStructure.id,
-        salaryComponentId: baseSalary.id,
-        sortOrder: 1,
-        value: null,
-        calculationType: SalaryComponentCalculationType.BASE_SALARY,
-      },
+
       {
         salaryStructureId: managerStructure.id,
         salaryComponentId: lunchAllowance.id,
@@ -799,13 +786,7 @@ async function main() {
         calculationType: SalaryComponentCalculationType.PERCENTAGE,
       },
       // INTERN
-      {
-        salaryStructureId: internStructure.id,
-        salaryComponentId: baseSalary.id,
-        sortOrder: 1,
-        value: null,
-        calculationType: SalaryComponentCalculationType.BASE_SALARY,
-      },
+
       {
         salaryStructureId: internStructure.id,
         salaryComponentId: lunchAllowance.id,
@@ -1039,12 +1020,6 @@ async function main() {
     });
     await prisma.payslipItem.createMany({
       data: [
-        {
-          payslipId: payslip.id,
-          name: 'Base Salary',
-          amount: decimal(item.baseSalary),
-          type: PayslipItemType.ALLOWANCE,
-        },
         {
           payslipId: payslip.id,
           name: 'Monthly Allowance',
