@@ -116,4 +116,16 @@ export class LeavesService {
 
     return result;
   }
+
+  async findAll() {
+    return this.prisma.leaveRequest.findMany();
+  }
+
+  async findOne(id: number) {
+    return this.prisma.leaveRequest.findUnique({
+      where: {
+        id,
+      },
+    });
+  }
 }
