@@ -103,6 +103,7 @@ export class PayrollPeriodService {
       });
       if (!payrollPeriod)
         throw new NotFoundException('Payroll period not found');
+
       const result = await tx.payrollPeriod.updateMany({
         where: {
           id: periodId,
@@ -164,6 +165,36 @@ export class PayrollPeriodService {
       if (assignments.length === 0)
         throw new BadRequestException('No assignments found');
 
+      // Get all attendance for each employee
+      const attendances = await tx.attendance.findMany({
+        where: {
+          employeeId: {
+            in: assignments.map((assignment) => assignment.employeeId),
+          },
+          date: {
+            gte: payrollPeriod.startDate,
+            lte: payrollPeriod.endDate,
+          },
+        },
+      });
+
+      const workedDays = new Map<number, Decimal>();
+
+      for (const attendance of attendances) {
+        let total = workedDays.get(attendance.employeeId) ?? new Decimal(0);
+
+        switch (attendance.status) {
+          case 'PRESENT':
+          case 'LATE':
+            total = total.plus(1);
+            break;
+          case 'HALF_DAY':
+            total = total.plus(0.5);
+            break;
+        }
+        workedDays.set(attendance.employeeId, total);
+      }
+
       for (const assignment of assignments) {
         const payslipItems: {
           name: string;
@@ -174,6 +205,18 @@ export class PayrollPeriodService {
         let totalDeduction = new Decimal(0);
         let totalGross = new Decimal(0);
         let totalNet = new Decimal(0);
+        let workedDay = workedDays.get(assignment.employeeId) ?? new Decimal(0);
+
+        const salaryBasedWorkedDay = assignment.baseSalary
+          .dividedBy(26)
+          .times(workedDay);
+
+        // Mannually ddd base salary to payslipitem
+        payslipItems.push({
+          name: `Base salary x ${workedDay.toFixed()} days`,
+          amount: salaryBasedWorkedDay,
+          type: 'ALLOWANCE',
+        });
 
         for (const component of assignment.salaryStructure.components) {
           let amount = new Decimal(0);
@@ -186,8 +229,6 @@ export class PayrollPeriodService {
                 'FIXED calculation type requires a non-null value',
               );
             amount = component.value;
-          } else if (component.calculationType === 'BASE_SALARY') {
-            amount = assignment.baseSalary;
           }
 
           payslipItems.push({
@@ -201,6 +242,7 @@ export class PayrollPeriodService {
             totalDeduction = totalDeduction.add(amount);
         }
 
+        totalEarning = totalEarning.plus(salaryBasedWorkedDay);
         totalGross = totalEarning;
         totalNet = totalGross.minus(totalDeduction);
 
