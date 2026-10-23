@@ -11,6 +11,8 @@ import { LeavesService } from './leaves.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UpdateLeaveStatus } from './dto/update-leave-status.dto';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import type { Payload } from 'src/auth/interfaces/payload.interface';
 
 @Controller('leave-requests')
 @ApiTags('Leaves')
@@ -24,8 +26,11 @@ export class LeavesController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.leavesService.findOne(id);
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: Payload,
+  ) {
+    return this.leavesService.findOne(id, user);
   }
 
   @Post()

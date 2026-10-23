@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,6 +8,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { compareAsc, differenceInDays } from 'date-fns';
 import { LeaveStatus } from 'src/generated/prisma/enums';
+import { Payload } from 'src/auth/interfaces/payload.interface';
 
 @Injectable()
 export class LeavesService {
@@ -121,11 +123,16 @@ export class LeavesService {
     return this.prisma.leaveRequest.findMany();
   }
 
-  async findOne(id: number) {
-    return this.prisma.leaveRequest.findUnique({
+  async findOne(id: number, currentUser: Payload) {
+    const result = await this.prisma.leaveRequest.findUnique({
       where: {
         id,
       },
     });
+    if (!result) throw new NotFoundException('Not found');
+    else if (result.employeeId !== currentUser.employeeId)
+      throw new ForbiddenException('Fobbiden resource');
+
+    return result;
   }
 }
