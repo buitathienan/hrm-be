@@ -6,10 +6,16 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { Payload } from '../interfaces/payload.interface';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+
+type RequestWithCookies = Request & {
+  cookies: {
+    accessToken?: string;
+  };
+};
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -31,7 +37,7 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
 
     // 2. Extract the token from the Authorization header
-    const token = this.extractTokenFromHeader(request);
+    const token = this.extractTokenFromCookies(request);
     if (!token) {
       throw new UnauthorizedException('Authentication token is missing');
     }
@@ -52,9 +58,9 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  // Helper method to split "Bearer <token>" and return just the token
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+  private extractTokenFromCookies(
+    request: RequestWithCookies,
+  ): string | undefined {
+    return request.cookies.accessToken;
   }
 }
