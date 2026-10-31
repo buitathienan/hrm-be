@@ -26,4 +26,21 @@ export class UserService {
       },
     });
   }
+
+  async findById(id: number) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        role: {
+          include: {
+            rolePermissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 }

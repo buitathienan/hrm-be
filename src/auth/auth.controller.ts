@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -11,6 +12,8 @@ import { LoginDto } from './dto/login.dto';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import type { Response } from 'express';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { Payload } from './interfaces/payload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -34,6 +37,9 @@ export class AuthController {
     });
     return {
       success: true,
+      data: {
+        access_token,
+      },
     };
   }
 
@@ -47,5 +53,10 @@ export class AuthController {
     });
 
     return { success: true };
+  }
+
+  @Get('me')
+  getMe(@CurrentUser() user: Payload) {
+    return this.authService.getMe(user.sub);
   }
 }
