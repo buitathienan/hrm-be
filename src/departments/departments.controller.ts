@@ -10,10 +10,11 @@ import {
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { DepartmentsService } from './departments.service';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Departments')
 @Controller('departments')
+@ApiBearerAuth()
 export class DepartmentsController {
   constructor(private departmentService: DepartmentsService) {}
   @Post()

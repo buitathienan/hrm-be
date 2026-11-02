@@ -22,6 +22,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Hrm backend')
+    .addBearerAuth()
     .addCookieAuth('accessToken')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);

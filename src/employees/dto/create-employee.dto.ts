@@ -33,7 +33,7 @@ export class CreateEmployeeDto {
   @IsNotEmpty()
   email: string;
 
-  @IsPhoneNumber()
+  @IsPhoneNumber('VN')
   @IsOptional()
   phone?: string;
 

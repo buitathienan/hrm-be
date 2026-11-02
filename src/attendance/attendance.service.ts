@@ -38,7 +38,6 @@ export class AttendanceService {
     const radius = Number(this.config.get<string>('OFFICE_RADIUS_METERS'));
     const now = new Date(); // Time
     const today = new Date(); // Date
-    today.setHours(0, 0, 0, 0);
 
     const distance = calculateDistance(
       data.latitude,
